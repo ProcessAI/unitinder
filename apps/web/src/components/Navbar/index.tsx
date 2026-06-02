@@ -42,11 +42,7 @@ export function Navbar({ role }: NavbarProps) {
           to={role === 'empresa' ? '/empresa' : '/'}
           className="flex items-center gap-2"
         >
-          <img src={logo} alt="UniTinder" className="w-9 h-9 object-contain" />
-          <span className="text-xl tracking-tight text-[var(--color-text)]">
-            <span className="font-normal">Uni</span>
-            <strong className="font-bold text-[var(--color-primary)]">Tinder</strong>
-          </span>
+          <img src={logo} alt="UniTinder" className="w-20 h-20 object-contain" />
         </NavLink>
 
         {/* Links — desktop */}
