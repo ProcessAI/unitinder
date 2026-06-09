@@ -17,6 +17,7 @@ const empresaLinks = [
   { label: 'Minhas vagas', to: '/empresa/minhas-vagas' },
   { label: 'Candidatos', to: '/empresa/candidatos' },
   { label: 'Perfil', to: '/empresa/perfil' },
+  { label: 'Dados da Empresa', to: '/empresa/cadastro' },
 ]
 
 export function Navbar({ role }: NavbarProps) {

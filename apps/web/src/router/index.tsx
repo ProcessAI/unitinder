@@ -2,6 +2,11 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import { EmpresaLayout } from '@/layouts/EmpresaLayout'
 import { UsuarioLayout } from '@/layouts/UsuarioLayout'
+import { CadastroEmpresa } from '@/pages/empresa/CadastroEmpresa'
+
+import { Login } from '@/pages/Login'
+import { SelecaoPerfil } from '@/pages/SelecaoPerfil'
+
 
 import { MinhasVagas } from '@/pages/empresa/MinhasVagas'
 import { Candidatos } from '@/pages/empresa/Candidatos'
@@ -20,16 +25,27 @@ export const router = createBrowserRouter([
       { path: 'minhas-vagas', element: <MinhasVagas /> },
       { path: 'candidatos', element: <Candidatos /> },
       { path: 'perfil', element: <PerfilEmpresa /> },
+      { path: 'cadastro', element: <CadastroEmpresa /> },
     ],
   },
   {
-    path: '/',
-    element: <UsuarioLayout />,
-    children: [
-      { index: true, element: <Feed /> },
-      { path: 'feed', element: <Feed /> },
-      { path: 'matches', element: <Matches /> },
-      { path: 'perfil', element: <PerfilUsuario /> },
-    ],
-  },
+  path: '/',
+  element: <SelecaoPerfil />,
+},
+
+{
+  path: '/login',
+  element: <Login />,
+},
+
+{
+  path: '/usuario',
+  element: <UsuarioLayout />,
+  children: [
+    { index: true, element: <Feed /> },
+    { path: 'feed', element: <Feed /> },
+    { path: 'matches', element: <Matches /> },
+    { path: 'perfil', element: <PerfilUsuario /> },
+  ],
+},
 ])
