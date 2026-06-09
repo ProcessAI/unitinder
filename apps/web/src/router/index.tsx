@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import { EmpresaLayout } from '@/layouts/EmpresaLayout'
 import { UsuarioLayout } from '@/layouts/UsuarioLayout'
+import { CadastroEmpresa } from '@/pages/empresa/CadastroEmpresa'
 
 import { MinhasVagas } from '@/pages/empresa/MinhasVagas'
 import { Candidatos } from '@/pages/empresa/Candidatos'
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
       { path: 'minhas-vagas', element: <MinhasVagas /> },
       { path: 'candidatos', element: <Candidatos /> },
       { path: 'perfil', element: <PerfilEmpresa /> },
+      { path: 'cadastro', element: <CadastroEmpresa /> },
     ],
   },
   {
