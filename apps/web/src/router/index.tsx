@@ -15,6 +15,7 @@ import { PerfilEmpresa } from '@/pages/empresa/Perfil'
 import { Feed } from '@/pages/usuario/Feed'
 import { Matches } from '@/pages/usuario/Matches'
 import { PerfilUsuario } from '@/pages/usuario/Perfil'
+import { CadastroHabilidade } from '@/pages/usuario/CadastroHabilidade'
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
     { path: 'feed', element: <Feed /> },
     { path: 'matches', element: <Matches /> },
     { path: 'perfil', element: <PerfilUsuario /> },
+    { path: 'cadastro-habilidade', element: <CadastroHabilidade /> }
   ],
 },
 ])
