@@ -243,8 +243,8 @@ export function MinhasVagas() {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/30 overflow-y-auto py-10">
-          <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl mx-4 p-8">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 overflow-y-auto pt-24 pb-10">
+          <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl mx-4 px-8 pb-8 pt-10">
             <h2 className="text-xl font-bold text-[var(--color-text)] mb-6">Nova vaga</h2>
 
             <div className="flex flex-col gap-5">
