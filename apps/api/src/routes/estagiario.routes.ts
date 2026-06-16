@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { EstagiarioController } from '../controllers/estagiario.controller'
+import { authMiddleware, requireRole } from '../middlewares/auth.middleware'
 
 const router = Router()
 
@@ -10,10 +11,10 @@ router.get('/', EstagiarioController.listar)
 router.get('/:id', EstagiarioController.buscarPorId)
 
 // PUT /estagiarios/:id
-router.put('/:id', EstagiarioController.atualizar)
+router.put('/:id', authMiddleware, requireRole('estagiario'), EstagiarioController.atualizar)
 
 // DELETE /estagiarios/:id
-router.delete('/:id', EstagiarioController.deletar)
+router.delete('/:id', authMiddleware, requireRole('estagiario'), EstagiarioController.deletar)
 
 // GET /estagiarios/:id/habilidades — habilidades vinculadas ao estagiário
 router.get('/:id/habilidades', EstagiarioController.listarHabilidades)

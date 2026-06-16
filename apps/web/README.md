@@ -19,6 +19,7 @@ Guia completo para quem vai trabalhar neste projeto. Leia antes de escrever qual
 11. [Como adicionar uma nova rota](#11-como-adicionar-uma-nova-rota)
 12. [Regras e convenções](#12-regras-e-convenções)
 13. [Mapa de responsabilidades](#13-mapa-de-responsabilidades)
+14. [Integração com a API](#14-integração-com-a-api)
 
 ---
 
@@ -120,14 +121,21 @@ apps/web/
 
 ## 4. Rotas disponíveis
 
-### Perfil Usuário
+### Fora dos layouts (sem menu)
 
 | Rota | Componente | Arquivo |
 |---|---|---|
-| `/` | Feed | `src/pages/usuario/Feed/index.tsx` |
-| `/feed` | Feed | `src/pages/usuario/Feed/index.tsx` |
-| `/matches` | Matches | `src/pages/usuario/Matches/index.tsx` |
-| `/perfil` | PerfilUsuario | `src/pages/usuario/Perfil/index.tsx` |
+| `/` | SelecaoPerfil | `src/pages/SelecaoPerfil/index.tsx` |
+| `/login` | Login | `src/pages/Login/index.tsx` |
+
+### Perfil Usuário (estagiário)
+
+| Rota | Componente | Arquivo |
+|---|---|---|
+| `/usuario` | Feed | `src/pages/usuario/Feed/index.tsx` |
+| `/usuario/feed` | Feed | `src/pages/usuario/Feed/index.tsx` |
+| `/usuario/matches` | Matches | `src/pages/usuario/Matches/index.tsx` |
+| `/usuario/perfil` | PerfilUsuario | `src/pages/usuario/Perfil/index.tsx` |
 
 ### Perfil Empresa
 
@@ -137,9 +145,12 @@ apps/web/
 | `/empresa/minhas-vagas` | MinhasVagas | `src/pages/empresa/MinhasVagas/index.tsx` |
 | `/empresa/candidatos` | Candidatos | `src/pages/empresa/Candidatos/index.tsx` |
 | `/empresa/perfil` | PerfilEmpresa | `src/pages/empresa/Perfil/index.tsx` |
+| `/empresa/cadastro` | CadastroEmpresa | `src/pages/empresa/CadastroEmpresa/index.tsx` |
 
 Todas as rotas de usuário usam o `UsuarioLayout` (menu de usuário).  
 Todas as rotas de empresa usam o `EmpresaLayout` (menu de empresa).
+
+> Ainda não existe uma tela de cadastro para estagiário — está sendo feita por outro desenvolvedor.
 
 ---
 
@@ -514,3 +525,65 @@ export default function Feed() { ... }
 | Adicionar imagens ou ícones | Colocar em `src/assets/` e importar no `index.tsx` |
 | Mudar o título da aba do browser | `index.html` (tag `<title>`) |
 | Instalar uma nova dependência | `npm install [pacote]` dentro de `apps/web/` |
+
+---
+
+## 14. Integração com a API
+
+Todo acesso ao backend passa por `src/lib/api.ts` — não use `fetch` direto nas páginas.
+
+```ts
+import { api, getSession, saveSession, ApiError } from '@/lib/api'
+```
+
+### O que tem lá
+
+| Função | Para quê |
+|---|---|
+| `api.login(identificador, senha)` | E-mail (estagiário) ou CNPJ (empresa) + senha |
+| `api.registroEmpresa(dados)` / `api.registroUsuario(dados)` | Cadastro |
+| `api.listarVagas(filtro?)` | Feed (estagiário) e Minhas vagas (empresa) |
+| `api.criarVaga(dados)` / `api.encerrarVaga(id)` | Publicar/encerrar vaga |
+| `api.criarMatch(idEstagiario, idVaga)` | Estagiário demonstra interesse numa vaga |
+| `api.listarMatchesPorEstagiario(id)` | Tela de Matches do estagiário |
+| `api.listarCandidatosPorVaga(id)` | Tela de Candidatos da empresa |
+| `api.atualizarStatusMatch(idMatch, status)` | Empresa aceita/recusa candidatura |
+
+Todas essas funções já tratam erro lançando `ApiError` (com `.message` pronto pra mostrar no `Alert`) e já enviam o token JWT salvo automaticamente.
+
+### Sessão (login)
+
+Depois de um login/cadastro bem-sucedido, salve a sessão:
+
+```ts
+saveSession({ token, role: 'estagiario' | 'empresa', id })
+```
+
+Para ler a sessão atual (ex.: pegar o id do estagiário/empresa logado):
+
+```ts
+const session = getSession() // null se não estiver logado
+```
+
+### Variável de ambiente
+
+A URL da API vem de `VITE_API_URL` (default: `http://localhost:3333`). Para mudar, copie `.env.example` para `.env` na raiz de `apps/web` e ajuste o valor.
+
+### Exemplo de uso numa página
+
+```tsx
+import { useEffect, useState } from 'react'
+import { api, getSession, ApiError } from '@/lib/api'
+
+const session = getSession()
+
+useEffect(() => {
+  if (!session) return
+
+  api.listarMatchesPorEstagiario(session.id)
+    .then(setMatches)
+    .catch((error) => {
+      setAlerta({ type: 'error', message: error instanceof ApiError ? error.message : 'Erro inesperado.' })
+    })
+}, [])
+```

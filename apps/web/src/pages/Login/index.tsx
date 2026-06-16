@@ -1,18 +1,58 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
+import { api, saveSession, ApiError } from '@/lib/api'
+import { Alert } from '@/components/Alert'
+
+function formatarCnpj(valor: string) {
+  const digits = valor.replace(/\D/g, '').slice(0, 14)
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
+}
 
 export function Login() {
   const navigate = useNavigate()
+  const tipoUsuario = localStorage.getItem('tipoUsuario') ?? 'empresa'
+  const isEmpresa = tipoUsuario === 'empresa'
 
-  const handleLogin = () => {
-    const tipo = localStorage.getItem('tipoUsuario')
+  const [identificador, setIdentificador] = useState('')
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
+  const [carregando, setCarregando] = useState(false)
 
-    if (tipo === 'empresa') {
-      navigate('/empresa')
+  const handleLogin = async () => {
+    setErro(null)
+
+    if (!identificador || !senha) {
+      setErro(isEmpresa ? 'Informe o CNPJ e a senha.' : 'Informe o e-mail e a senha.')
       return
     }
 
-    navigate('/usuario')
+    setCarregando(true)
+
+    try {
+      const resposta = await api.login(identificador, senha)
+
+      saveSession({
+        token: resposta.token,
+        role: resposta.role,
+        id: resposta.role === 'empresa' ? resposta.empresa!.id : resposta.estagiario!.id,
+      })
+
+      if (resposta.role === 'empresa') {
+        navigate('/empresa')
+        return
+      }
+
+      navigate('/usuario')
+    } catch (error) {
+      setErro(error instanceof ApiError ? error.message : 'Não foi possível entrar. Tente novamente.')
+    } finally {
+      setCarregando(false)
+    }
   }
 
   return (
@@ -41,13 +81,25 @@ export function Login() {
         </h1>
 
         <div className="w-[420px] rounded-lg border border-gray-200 bg-white p-6">
+          {erro && (
+            <div className="mb-4">
+              <Alert type="error" message={erro} onClose={() => setErro(null)} />
+            </div>
+          )}
+
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-[#1F4068]">
-              Email
+              {isEmpresa ? 'CNPJ' : 'E-mail'}
             </label>
 
             <input
-              type="email"
+              type={isEmpresa ? 'text' : 'email'}
+              placeholder={isEmpresa ? '00.000.000/0000-00' : 'seu@email.com'}
+              inputMode={isEmpresa ? 'numeric' : 'email'}
+              value={identificador}
+              onChange={(event) =>
+                setIdentificador(isEmpresa ? formatarCnpj(event.target.value) : event.target.value)
+              }
               className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
             />
           </div>
@@ -59,6 +111,8 @@ export function Login() {
 
             <input
               type="password"
+              value={senha}
+              onChange={(event) => setSenha(event.target.value)}
               className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
             />
           </div>
@@ -66,14 +120,24 @@ export function Login() {
           <button
             type="button"
             onClick={handleLogin}
-            className="w-full rounded bg-[#1F4068] py-2 text-white transition hover:bg-[#173553]"
+            disabled={carregando}
+            className="w-full rounded bg-[#1F4068] py-2 text-white transition hover:bg-[#173553] disabled:opacity-60"
           >
-            Entrar
+            {carregando ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <p className="mt-4 text-center text-sm text-gray-500">
-            Não tem conta? Cadastre-se
-          </p>
+          {isEmpresa && (
+            <p className="mt-4 text-center text-sm text-gray-500">
+              Não tem conta?{' '}
+              <button
+                type="button"
+                onClick={() => navigate('/empresa/cadastro')}
+                className="font-medium text-[#1F4068] hover:underline"
+              >
+                Cadastre-se
+              </button>
+            </p>
+          )}
         </div>
       </main>
     </div>
