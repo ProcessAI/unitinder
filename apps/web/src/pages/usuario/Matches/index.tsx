@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert } from '@/components/Alert'
+import { api, getSession, ApiError } from '@/lib/api'
 
 type MatchStatus = 'ativo' | 'encerrado'
 
@@ -15,40 +16,21 @@ interface MatchCard {
   contactEmail?: string
 }
 
-const MOCK_MATCHES: MatchCard[] = [
-  {
-    id: '1',
-    jobId: 'vaga-001',
-    jobTitle: 'Estágio em Desenvolvimento Frontend',
-    companyName: 'TechNova',
-    location: 'São Paulo, SP',
-    matchedAt: '2025-06-07T14:30:00Z',
-    status: 'ativo',
+function mapMatchDaApi(m: any): MatchCard {
+  const recusado = m.match_status === 'RECUSADO'
+  const aceito = m.match_status === 'ACEITO'
+  return {
+    id: String(m.id_match),
+    jobId: String(m.vaga?.id_vaga ?? ''),
+    jobTitle: m.vaga?.vaga_titulo ?? 'Vaga',
+    companyName: m.vaga?.empresa?.empresa_nome ?? 'Empresa',
+    location: m.vaga?.vaga_localidade ?? '',
+    matchedAt: m.match_data ?? new Date().toISOString(),
+    status: recusado ? 'encerrado' : 'ativo',
     proficiencyRequired: 'intermediario',
-    contactEmail: 'rh@technova.com.br',
-  },
-  {
-    id: '2',
-    jobId: 'vaga-002',
-    jobTitle: 'Estágio em Dados e Analytics',
-    companyName: 'DataMind',
-    location: 'Remoto',
-    matchedAt: '2025-06-05T09:00:00Z',
-    status: 'ativo',
-    proficiencyRequired: 'basico',
-    contactEmail: 'talentos@datamind.io',
-  },
-  {
-    id: '3',
-    jobId: 'vaga-003',
-    jobTitle: 'Estágio em Engenharia de Software',
-    companyName: 'CoreSystems',
-    location: 'Belo Horizonte, MG',
-    matchedAt: '2025-05-28T11:15:00Z',
-    status: 'encerrado',
-    proficiencyRequired: 'avancado',
-  },
-]
+    contactEmail: aceito ? m.vaga?.empresa?.usuarios?.[0]?.usuario_email : undefined,
+  }
+}
 
 const PROFICIENCY_LABELS: Record<string, string> = {
   basico: 'Básico',
@@ -87,12 +69,28 @@ function InitialsAvatar({ name }: { name: string }) {
 export function Matches() {
   const [alerta, setAlerta] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [filtro, setFiltro] = useState<'todos' | 'ativo' | 'encerrado'>('todos')
+  const [matches, setMatches] = useState<MatchCard[]>([])
 
-  const matchesFiltrados = MOCK_MATCHES.filter(
+  useEffect(() => {
+    const session = getSession()
+    if (!session || session.role !== 'estagiario') return
+
+    api
+      .listarMatchesPorEstagiario(session.id)
+      .then((dados) => setMatches(dados.map(mapMatchDaApi)))
+      .catch((error) => {
+        setAlerta({
+          type: 'error',
+          message: error instanceof ApiError ? error.message : 'Não foi possível carregar seus matches.',
+        })
+      })
+  }, [])
+
+  const matchesFiltrados = matches.filter(
     (m) => filtro === 'todos' || m.status === filtro
   )
 
-  const totalAtivos = MOCK_MATCHES.filter((m) => m.status === 'ativo').length
+  const totalAtivos = matches.filter((m) => m.status === 'ativo').length
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { EmpresaController } from '../controllers/empresa.controller'
+import { authMiddleware, requireRole } from '../middlewares/auth.middleware'
 
 const router = Router()
 
@@ -10,9 +11,9 @@ router.get('/', EmpresaController.listar)
 router.get('/:id', EmpresaController.buscarPorId)
 
 // PUT /empresas/:id
-router.put('/:id', EmpresaController.atualizar)
+router.put('/:id', authMiddleware, requireRole('empresa'), EmpresaController.atualizar)
 
 // DELETE /empresas/:id
-router.delete('/:id', EmpresaController.deletar)
+router.delete('/:id', authMiddleware, requireRole('empresa'), EmpresaController.deletar)
 
 export default router

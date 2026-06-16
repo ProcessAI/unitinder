@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { VagaController } from '../controllers/vaga.controller'
+import { authMiddleware, requireRole } from '../middlewares/auth.middleware'
 
 const router = Router()
 
@@ -10,13 +11,13 @@ router.get('/', VagaController.listar)
 router.get('/:id', VagaController.buscarPorId)
 
 // POST /vagas
-router.post('/', VagaController.criar)
+router.post('/', authMiddleware, requireRole('empresa'), VagaController.criar)
 
 // PUT /vagas/:id
-router.put('/:id', VagaController.atualizar)
+router.put('/:id', authMiddleware, requireRole('empresa'), VagaController.atualizar)
 
 // DELETE /vagas/:id
-router.delete('/:id', VagaController.deletar)
+router.delete('/:id', authMiddleware, requireRole('empresa'), VagaController.deletar)
 
 // GET /vagas/:id/habilidades — habilidades exigidas pela vaga
 router.get('/:id/habilidades', VagaController.listarHabilidades)

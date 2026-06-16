@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id_usuario               Int      @id @default(autoincrement())
+  usuario_nome             String   @db.VarChar(100)
+  usuario_email            String   @unique
+  usuario_senha            String   @db.VarChar(255)
+  usuario_status           String   @default("A") @db.Char(1)
+  usuario_created_at       DateTime @default(now()) @db.Timestamptz()
+  usuario_update_at        DateTime @default(now()) @db.Timestamptz()
+  id_empresa_empresa       Int?
+  id_estagiario_estagiario Int?
+
+  empresa    Empresa?    @relation(fields: [id_empresa_empresa], references: [id_empresa], onDelete: SetNull, onUpdate: Cascade)
+  estagiario Estagiario? @relation(fields: [id_estagiario_estagiario], references: [id_estagiario], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("usuario")
+}
+
+model Empresa {
+  id_empresa         Int      @id @default(autoincrement())
+  empresa_cnpj       String   @unique @db.Char(14)
+  empresa_nome       String   @db.VarChar(255)
+  empresa_setor      String?  @db.VarChar(150)
+  empresa_cidade     String?  @db.VarChar(150)
+  empresa_descricao  String?
+  empresa_status     String   @default("A") @db.Char(1)
+  empresa_created_at DateTime @default(now()) @db.Timestamptz()
+  empresa_updated_at DateTime @default(now()) @db.Timestamptz()
+
+  usuarios Usuario[]
+  vagas    Vaga[]
+
+  @@map("empresa")
+}
+
+model Estagiario {
+  id_estagiario                      Int       @id @default(autoincrement())
+  estagiario_email                   String    @unique @db.VarChar(255)
+  estagiario_senha_hash              String    @db.VarChar(255)
+  estagiario_nome_completo           String    @db.VarChar(150)
+  estagiario_cpf                     String    @unique @db.Char(11)
+  estagiario_data_nascimento         DateTime? @db.Date
+  estagiario_telefone                String?   @db.VarChar(20)
+  estagiario_foto_perfil_url         String?
+  estagiario_cidade                  String?   @db.VarChar(100)
+  estagiario_estado                  String?   @db.Char(2)
+  estagiario_disponivel_remoto       Boolean?  @default(false)
+  estagiario_instituicao             String?   @db.VarChar(150)
+  estagiario_curso                   String?   @db.VarChar(100)
+  estagiario_semestre_atual          Int?      @db.SmallInt
+  estagiario_previsao_formatura      DateTime? @db.Date
+  estagiario_turno                   String?   @db.VarChar(10)
+  estagiario_area_interesse          String?   @db.VarChar(100)
+  estagiario_nivel_experiencia       String?   @db.VarChar(20)
+  estagiario_cv_url                  String?
+  estagiario_linkedin_url            String?
+  estagiario_portfolio_url           String?
+  estagiario_bio                     String?
+  estagiario_modalidade_preferida    String?   @db.VarChar(20)
+  estagiario_carga_horaria_preferida Int?      @db.SmallInt
+  estagiario_aceita_bolsa_minima     Boolean?  @default(false)
+  estagiario_ativo                   Boolean   @default(true)
+  estagiario_perfil_completo         Boolean   @default(false)
+  estagiario_created_at              DateTime  @default(now()) @db.Timestamptz()
+  estagiario_updated_at              DateTime  @default(now()) @db.Timestamptz()
+
+  usuarios    Usuario[]
+  habilidades RlEstagiarioHabilidade[]
+  matches     Match[]
+
+  @@map("estagiario")
+}
+
+model Vaga {
+  id_vaga                  Int       @id @default(autoincrement())
+  vaga_titulo              String    @db.VarChar(150)
+  vaga_descricao           String?   @db.VarChar(255)
+  vaga_area                String?   @db.VarChar(80)
+  vaga_localidade          String?   @db.VarChar(120)
+  vaga_modelo_trabalho     String?   @db.VarChar(20)
+  vaga_tipo_contrato       String?   @db.VarChar(20)
+  vaga_nivel               String?   @db.VarChar(20)
+  vaga_qtd_vagas           Int?
+  vaga_pcd                 Boolean?  @default(false)
+  vaga_salario_min         Decimal?  @db.Decimal(10, 2)
+  vaga_salario_max         Decimal?  @db.Decimal(10, 2)
+  vaga_beneficios          String?
+  vaga_carga_horaria       String?   @db.VarChar(30)
+  vaga_escolaridade_minima String?   @db.VarChar(40)
+  vaga_experiencia_minima  String?   @db.VarChar(40)
+  vaga_prazo_candidatura   DateTime? @db.Date
+  vaga_status              String    @default("A") @db.Char(1)
+  vaga_data_publicacao     DateTime? @db.Timestamptz()
+  vaga_created_at          DateTime  @default(now()) @db.Timestamptz()
+  vaga_updated_at          DateTime  @default(now()) @db.Timestamptz()
+  id_empresa_empresa       Int
+
+  empresa     Empresa            @relation(fields: [id_empresa_empresa], references: [id_empresa], onDelete: Cascade, onUpdate: Cascade)
+  habilidades RlVagaHabilidade[]
+  matches     Match[]
+
+  @@map("vagas")
+}
+
+model Match {
+  id_match                 Int      @id @default(autoincrement())
+  match_data               DateTime @default(now()) @db.Timestamptz()
+  match_status             String   @default("PENDENTE") @db.VarChar(20)
+  id_estagiario_estagiario Int
+  id_vaga_vagas            Int
+
+  estagiario Estagiario @relation(fields: [id_estagiario_estagiario], references: [id_estagiario], onDelete: Cascade, onUpdate: Cascade)
+  vaga       Vaga       @relation(fields: [id_vaga_vagas], references: [id_vaga], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("match")
+}
+
+model Habilidade {
+  id_habilidade        Int     @id @default(autoincrement())
+  habilidade_nome      String  @db.VarChar(255)
+  habilidade_categoria String? @db.VarChar(80)
+  habilidade_nivel     String? @db.Char(1)
+  habilidade_descricao String?
+
+  estagiarios RlEstagiarioHabilidade[]
+  vagas       RlVagaHabilidade[]
+
+  @@map("habilidade")
+}
+
+model RlEstagiarioHabilidade {
+  id_estagiario_habilidade Int @id @default(autoincrement())
+  id_estagiario            Int
+  id_habilidade            Int
+
+  estagiario Estagiario @relation(fields: [id_estagiario], references: [id_estagiario], onDelete: Cascade, onUpdate: Cascade)
+  habilidade Habilidade @relation(fields: [id_habilidade], references: [id_habilidade], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("rl_estagiario_habilidade")
+}
+
+model RlVagaHabilidade {
+  id_vaga_habilidade Int @id @default(autoincrement())
+  id_vaga            Int
+  id_habilidade      Int
+
+  vaga       Vaga       @relation(fields: [id_vaga], references: [id_vaga], onDelete: Cascade, onUpdate: Cascade)
+  habilidade Habilidade @relation(fields: [id_habilidade], references: [id_habilidade], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("rl_vaga_habilidade")
+}

@@ -1,18 +1,46 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
+import { api, saveSession, ApiError } from '@/lib/api'
+import { Alert } from '@/components/Alert'
 
 export function Login() {
   const navigate = useNavigate()
+  const [identificador, setIdentificador] = useState('')
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
+  const [carregando, setCarregando] = useState(false)
 
-  const handleLogin = () => {
-    const tipo = localStorage.getItem('tipoUsuario')
+  const handleLogin = async () => {
+    setErro(null)
 
-    if (tipo === 'empresa') {
-      navigate('/empresa')
+    if (!identificador || !senha) {
+      setErro('Informe email/CNPJ e senha.')
       return
     }
 
-    navigate('/usuario')
+    setCarregando(true)
+
+    try {
+      const resposta = await api.login(identificador, senha)
+
+      saveSession({
+        token: resposta.token,
+        role: resposta.role,
+        id: resposta.role === 'empresa' ? resposta.empresa!.id : resposta.estagiario!.id,
+      })
+
+      if (resposta.role === 'empresa') {
+        navigate('/empresa')
+        return
+      }
+
+      navigate('/usuario')
+    } catch (error) {
+      setErro(error instanceof ApiError ? error.message : 'Não foi possível entrar. Tente novamente.')
+    } finally {
+      setCarregando(false)
+    }
   }
 
   return (
@@ -41,13 +69,21 @@ export function Login() {
         </h1>
 
         <div className="w-[420px] rounded-lg border border-gray-200 bg-white p-6">
+          {erro && (
+            <div className="mb-4">
+              <Alert type="error" message={erro} onClose={() => setErro(null)} />
+            </div>
+          )}
+
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-[#1F4068]">
               Email
             </label>
 
             <input
-              type="email"
+              type="text"
+              value={identificador}
+              onChange={(event) => setIdentificador(event.target.value)}
               className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
             />
           </div>
@@ -59,6 +95,8 @@ export function Login() {
 
             <input
               type="password"
+              value={senha}
+              onChange={(event) => setSenha(event.target.value)}
               className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
             />
           </div>
@@ -66,9 +104,10 @@ export function Login() {
           <button
             type="button"
             onClick={handleLogin}
-            className="w-full rounded bg-[#1F4068] py-2 text-white transition hover:bg-[#173553]"
+            disabled={carregando}
+            className="w-full rounded bg-[#1F4068] py-2 text-white transition hover:bg-[#173553] disabled:opacity-60"
           >
-            Entrar
+            {carregando ? 'Entrando...' : 'Entrar'}
           </button>
 
           <p className="mt-4 text-center text-sm text-gray-500">

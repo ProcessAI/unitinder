@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Alert } from '@/components/Alert'
+import { api, saveSession, ApiError } from '@/lib/api'
 
 type FormData = {
   nomeEmpresa: string
@@ -13,6 +15,8 @@ type FormData = {
 }
 
 export function CadastroEmpresa() {
+  const navigate = useNavigate()
+  const [enviando, setEnviando] = useState(false)
   const [alerta, setAlerta] = useState<{
     type: 'success' | 'error'
     message: string
@@ -40,7 +44,7 @@ export function CadastroEmpresa() {
     }))
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (formData.senha !== formData.confirmarSenha) {
@@ -51,12 +55,34 @@ export function CadastroEmpresa() {
       return
     }
 
-    setAlerta({
-      type: 'success',
-      message: 'Empresa cadastrada com sucesso!',
-    })
+    setEnviando(true)
 
-    console.log('Dados da empresa:', formData)
+    try {
+      const resposta = await api.registroEmpresa({
+        nomeEmpresa: formData.nomeEmpresa,
+        cnpj: formData.cnpj,
+        email: formData.email,
+        senha: formData.senha,
+        setor: formData.areaAtuacao,
+        descricao: formData.descricao,
+      })
+
+      saveSession({ token: resposta.token, role: 'empresa', id: resposta.empresa.id })
+
+      setAlerta({
+        type: 'success',
+        message: 'Empresa cadastrada com sucesso!',
+      })
+
+      setTimeout(() => navigate('/empresa'), 1200)
+    } catch (error) {
+      setAlerta({
+        type: 'error',
+        message: error instanceof ApiError ? error.message : 'Não foi possível cadastrar a empresa.',
+      })
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -236,9 +262,10 @@ export function CadastroEmpresa() {
 
           <button
             type="submit"
-            className="rounded-lg bg-[var(--color-primary)] px-5 py-3 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)]"
+            disabled={enviando}
+            className="rounded-lg bg-[var(--color-primary)] px-5 py-3 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)] disabled:opacity-60"
           >
-            Cadastrar empresa
+            {enviando ? 'Cadastrando...' : 'Cadastrar empresa'}
           </button>
         </div>
       </form>
