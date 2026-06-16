@@ -15,7 +15,7 @@ export function Login() {
     setErro(null)
 
     if (!identificador || !senha) {
-      setErro('Informe email/CNPJ e senha.')
+      setErro('Informe o CNPJ e a senha.')
       return
     }
 
@@ -77,11 +77,12 @@ export function Login() {
 
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-[#1F4068]">
-              Email
+              CNPJ
             </label>
 
             <input
               type="text"
+              placeholder="00.000.000/0000-00"
               value={identificador}
               onChange={(event) => setIdentificador(event.target.value)}
               className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
