@@ -8,9 +8,9 @@ interface NavbarProps {
 }
 
 const usuarioLinks = [
-  { label: 'Feed', to: '/feed' },
-  { label: 'Matches', to: '/matches' },
-  { label: 'Perfil', to: '/perfil' },
+  { label: 'Feed', to: '/usuario/feed' },
+  { label: 'Matches', to: '/usuario/matches' },
+  { label: 'Perfil', to: '/usuario/perfil' },
 ]
 
 const empresaLinks = [
@@ -40,7 +40,7 @@ export function Navbar({ role }: NavbarProps) {
 
         {/* Logo */}
         <NavLink
-          to={role === 'empresa' ? '/empresa' : '/'}
+          to={role === 'empresa' ? '/empresa' : '/usuario'}
           className="flex items-center gap-2"
         >
           <img src={logo} alt="UniTinder" className="w-20 h-20 object-contain" />
