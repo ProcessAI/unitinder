@@ -4,8 +4,20 @@ import logo from '@/assets/logo.png'
 import { api, saveSession, ApiError } from '@/lib/api'
 import { Alert } from '@/components/Alert'
 
+function formatarCnpj(valor: string) {
+  const digits = valor.replace(/\D/g, '').slice(0, 14)
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
+}
+
 export function Login() {
   const navigate = useNavigate()
+  const tipoUsuario = localStorage.getItem('tipoUsuario') ?? 'empresa'
+  const isEmpresa = tipoUsuario === 'empresa'
+
   const [identificador, setIdentificador] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState<string | null>(null)
@@ -15,7 +27,7 @@ export function Login() {
     setErro(null)
 
     if (!identificador || !senha) {
-      setErro('Informe o CNPJ e a senha.')
+      setErro(isEmpresa ? 'Informe o CNPJ e a senha.' : 'Informe o e-mail e a senha.')
       return
     }
 
@@ -77,14 +89,17 @@ export function Login() {
 
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-[#1F4068]">
-              CNPJ
+              {isEmpresa ? 'CNPJ' : 'E-mail'}
             </label>
 
             <input
-              type="text"
-              placeholder="00.000.000/0000-00"
+              type={isEmpresa ? 'text' : 'email'}
+              placeholder={isEmpresa ? '00.000.000/0000-00' : 'seu@email.com'}
+              inputMode={isEmpresa ? 'numeric' : 'email'}
               value={identificador}
-              onChange={(event) => setIdentificador(event.target.value)}
+              onChange={(event) =>
+                setIdentificador(isEmpresa ? formatarCnpj(event.target.value) : event.target.value)
+              }
               className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
             />
           </div>
@@ -111,9 +126,18 @@ export function Login() {
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <p className="mt-4 text-center text-sm text-gray-500">
-            Não tem conta? Cadastre-se
-          </p>
+          {isEmpresa && (
+            <p className="mt-4 text-center text-sm text-gray-500">
+              Não tem conta?{' '}
+              <button
+                type="button"
+                onClick={() => navigate('/empresa/cadastro')}
+                className="font-medium text-[#1F4068] hover:underline"
+              >
+                Cadastre-se
+              </button>
+            </p>
+          )}
         </div>
       </main>
     </div>
