@@ -40,7 +40,7 @@ export function Navbar({ role }: NavbarProps) {
 
         {/* Logo */}
         <NavLink
-          to={role === 'empresa' ? '/empresa' : '/usuario'}
+          to="/login"
           className="flex items-center gap-2"
         >
           <img src={logo} alt="UniTinder" className="w-20 h-20 object-contain" />
