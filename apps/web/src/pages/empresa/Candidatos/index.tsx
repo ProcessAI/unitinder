@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert } from '@/components/Alert'
+import { api, getSession, ApiError } from '@/lib/api'
 
 type CandidatoStatus = 'novo' | 'em_analise' | 'aprovado' | 'recusado'
 
@@ -17,59 +18,27 @@ interface Candidato {
   contactEmail?: string
 }
 
-const MOCK_CANDIDATOS: Candidato[] = [
-  {
-    id: 'c1',
-    nome: 'Ana Beatriz Lima',
-    curso: 'Ciência da Computação',
-    universidade: 'USP',
-    matchedAt: '2025-06-07T14:30:00Z',
-    jobTitle: 'Estágio em Desenvolvimento Frontend',
-    jobId: 'vaga-001',
-    status: 'novo',
+function mapStatusDaApi(status: string): CandidatoStatus {
+  if (status === 'ACEITO') return 'aprovado'
+  if (status === 'RECUSADO') return 'recusado'
+  return 'novo'
+}
+
+function mapCandidatoDaApi(m: any, vaga: { id_vaga: number; vaga_titulo: string }): Candidato {
+  return {
+    id: String(m.id_match),
+    nome: m.estagiario?.estagiario_nome_completo ?? 'Candidato',
+    curso: m.estagiario?.estagiario_curso ?? '',
+    universidade: m.estagiario?.estagiario_instituicao ?? '',
+    matchedAt: m.match_data ?? new Date().toISOString(),
+    jobTitle: vaga.vaga_titulo,
+    jobId: String(vaga.id_vaga),
+    status: mapStatusDaApi(m.match_status),
     proficiencia: 'intermediario',
-    habilidades: ['React', 'TypeScript', 'CSS'],
-    contactEmail: 'ana.lima@usp.br',
-  },
-  {
-    id: 'c2',
-    nome: 'Carlos Eduardo Souza',
-    curso: 'Sistemas de Informação',
-    universidade: 'UNICAMP',
-    matchedAt: '2025-06-06T10:00:00Z',
-    jobTitle: 'Estágio em Dados e Analytics',
-    jobId: 'vaga-002',
-    status: 'em_analise',
-    proficiencia: 'avancado',
-    habilidades: ['Python', 'SQL', 'Power BI'],
-    contactEmail: 'carlos.souza@unicamp.br',
-  },
-  {
-    id: 'c3',
-    nome: 'Julia Fernandes',
-    curso: 'Engenharia de Software',
-    universidade: 'PUC-MG',
-    matchedAt: '2025-06-04T16:45:00Z',
-    jobTitle: 'Estágio em Desenvolvimento Frontend',
-    jobId: 'vaga-001',
-    status: 'aprovado',
-    proficiencia: 'intermediario',
-    habilidades: ['Vue.js', 'Node.js', 'PostgreSQL'],
-    contactEmail: 'julia.fernandes@pucminas.br',
-  },
-  {
-    id: 'c4',
-    nome: 'Rafael Moreira',
-    curso: 'Análise e Desenvolvimento de Sistemas',
-    universidade: 'FATEC-SP',
-    matchedAt: '2025-06-02T08:20:00Z',
-    jobTitle: 'Estágio em Engenharia de Software',
-    jobId: 'vaga-003',
-    status: 'recusado',
-    proficiencia: 'basico',
-    habilidades: ['Java', 'Git'],
-  },
-]
+    habilidades: [],
+    contactEmail: m.estagiario?.estagiario_email,
+  }
+}
 
 const STATUS_LABELS: Record<CandidatoStatus, string> = {
   novo: 'Novo',
@@ -119,8 +88,35 @@ function InitialsAvatar({ name }: { name: string }) {
 export function Candidatos() {
   const [alerta, setAlerta] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [filtroStatus, setFiltroStatus] = useState<CandidatoStatus | 'todos'>('todos')
-  const [candidatos, setCandidatos] = useState<Candidato[]>(MOCK_CANDIDATOS)
+  const [candidatos, setCandidatos] = useState<Candidato[]>([])
   const [contatosVisiveis, setContatosVisiveis] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    const session = getSession()
+    if (!session || session.role !== 'empresa') return
+
+    async function carregar() {
+      try {
+        const vagas = await api.listarVagas({ id_empresa_empresa: session!.id })
+
+        const listas = await Promise.all(
+          vagas.map(async (vaga) => {
+            const matches = await api.listarCandidatosPorVaga(vaga.id_vaga)
+            return matches.map((m) => mapCandidatoDaApi(m, vaga))
+          })
+        )
+
+        setCandidatos(listas.flat())
+      } catch (error) {
+        setAlerta({
+          type: 'error',
+          message: error instanceof ApiError ? error.message : 'Não foi possível carregar os candidatos.',
+        })
+      }
+    }
+
+    carregar()
+  }, [])
 
   const candidatosFiltrados = candidatos.filter(
     (c) => filtroStatus === 'todos' || c.status === filtroStatus
@@ -128,17 +124,27 @@ export function Candidatos() {
 
   const totalNovos = candidatos.filter((c) => c.status === 'novo').length
 
-  function alterarStatus(id: string, novoStatus: CandidatoStatus) {
-    setCandidatos((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: novoStatus } : c))
-    )
+  async function alterarStatus(id: string, novoStatus: CandidatoStatus) {
     const labels: Record<CandidatoStatus, string> = {
       aprovado: 'Candidato aprovado com sucesso!',
       recusado: 'Candidato recusado.',
       em_analise: 'Candidato movido para análise.',
       novo: 'Status atualizado.',
     }
-    setAlerta({ type: novoStatus === 'aprovado' ? 'success' : 'error', message: labels[novoStatus] })
+
+    try {
+      await api.atualizarStatusMatch(Number(id), novoStatus === 'aprovado' ? 'aceito' : 'recusado')
+
+      setCandidatos((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, status: novoStatus } : c))
+      )
+      setAlerta({ type: novoStatus === 'aprovado' ? 'success' : 'error', message: labels[novoStatus] })
+    } catch (error) {
+      setAlerta({
+        type: 'error',
+        message: error instanceof ApiError ? error.message : 'Não foi possível atualizar o status do candidato.',
+      })
+    }
   }
 
   function toggleContato(id: string) {

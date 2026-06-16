@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert } from '@/components/Alert'
+import { api, getSession, ApiError } from '@/lib/api'
 
 const SKILLS = [
   'Comunicação', 'Docker', 'Figma', 'Git', 'HTML/CSS',
@@ -115,12 +116,66 @@ function validate(form: FormData): FormErrors {
   return errors
 }
 
+function mapVagaDaApi(v: any): Vaga {
+  return {
+    id: String(v.id_vaga),
+    titulo: v.vaga_titulo ?? '',
+    descricao: v.vaga_descricao ?? '',
+    area: v.vaga_area ?? '',
+    localidade: v.vaga_localidade ?? '',
+    modelo: v.vaga_modelo_trabalho ?? '',
+    tipoContrato: v.vaga_tipo_contrato ?? '',
+    nivel: v.vaga_nivel ?? '',
+    salarioMin: v.vaga_salario_min !== null && v.vaga_salario_min !== undefined ? String(v.vaga_salario_min) : '',
+    salarioMax: v.vaga_salario_max !== null && v.vaga_salario_max !== undefined ? String(v.vaga_salario_max) : '',
+    quantidadeVagas: v.vaga_qtd_vagas !== null && v.vaga_qtd_vagas !== undefined ? String(v.vaga_qtd_vagas) : '',
+    prazoCandidatura: v.vaga_prazo_candidatura ? String(v.vaga_prazo_candidatura).slice(0, 10) : '',
+    beneficios: v.vaga_beneficios ?? '',
+    cargaHoraria: v.vaga_carga_horaria ?? '',
+    horarioTrabalho: '',
+    escolaridade: v.vaga_escolaridade_minima ?? '',
+    experienciaMinima: v.vaga_experiencia_minima ?? '',
+    pcd: v.vaga_pcd ? 'Sim' : 'Não',
+    habilidades: [],
+    status: v.vaga_status === 'A' ? 'Ativa' : 'Inativa',
+    dataPublicacao: v.vaga_created_at ?? new Date().toISOString(),
+    dataAtualizacao: v.vaga_updated_at ?? new Date().toISOString(),
+    matches: 0,
+  }
+}
+
 export function MinhasVagas() {
   const [vagas, setVagas] = useState<Vaga[]>([])
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [errors, setErrors] = useState<FormErrors>({})
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [publicando, setPublicando] = useState(false)
+
+  useEffect(() => {
+    const session = getSession()
+    if (!session || session.role !== 'empresa') return
+
+    async function carregar() {
+      try {
+        const vagasApi = await api.listarVagas({ id_empresa_empresa: session!.id })
+        const vagasMapeadas = vagasApi.map(mapVagaDaApi)
+
+        const contagens = await Promise.all(
+          vagasMapeadas.map((v) => api.listarCandidatosPorVaga(Number(v.id)).then((c) => c.length).catch(() => 0))
+        )
+
+        setVagas(vagasMapeadas.map((v, index) => ({ ...v, matches: contagens[index] })))
+      } catch (error) {
+        setAlert({
+          type: 'error',
+          message: error instanceof ApiError ? error.message : 'Não foi possível carregar as vagas.',
+        })
+      }
+    }
+
+    carregar()
+  }, [])
 
   function set<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -136,7 +191,7 @@ export function MinhasVagas() {
     }))
   }
 
-  function handlePublicar() {
+  async function handlePublicar() {
     const errs = validate(form)
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
@@ -145,25 +200,52 @@ export function MinhasVagas() {
       return
     }
 
-    const now = new Date().toISOString()
-    const nova: Vaga = {
-      id: crypto.randomUUID(),
-      ...form,
-      status: 'Ativa',
-      dataPublicacao: now,
-      dataAtualizacao: now,
-      matches: 0,
+    const session = getSession()
+    if (!session) {
+      setAlert({ type: 'error', message: 'Você precisa estar logado como empresa para publicar.' })
+      return
     }
 
-    setVagas(prev => [nova, ...prev])
-    setForm(emptyForm)
-    setErrors({})
-    setShowModal(false)
-    setAlert({ type: 'success', message: 'Vaga publicada!' })
-    setTimeout(() => setAlert(null), 4000)
+    setPublicando(true)
+
+    try {
+      const vagaCriada = await api.criarVaga({
+        id_empresa_empresa: session.id,
+        vaga_titulo: form.titulo,
+        vaga_descricao: form.descricao,
+        vaga_area: form.area,
+        vaga_localidade: form.localidade,
+        vaga_modelo_trabalho: form.modelo,
+        vaga_tipo_contrato: form.tipoContrato,
+        vaga_nivel: form.nivel,
+        vaga_qtd_vagas: Number(form.quantidadeVagas),
+        vaga_pcd: form.pcd === 'Sim',
+        vaga_salario_min: form.salarioMin ? Number(form.salarioMin) : undefined,
+        vaga_salario_max: form.salarioMax ? Number(form.salarioMax) : undefined,
+        vaga_beneficios: form.beneficios,
+        vaga_carga_horaria: form.cargaHoraria,
+        vaga_escolaridade_minima: form.escolaridade,
+        vaga_experiencia_minima: form.experienciaMinima,
+        vaga_prazo_candidatura: form.prazoCandidatura || undefined,
+      })
+
+      setVagas(prev => [{ ...mapVagaDaApi(vagaCriada), habilidades: form.habilidades }, ...prev])
+      setForm(emptyForm)
+      setErrors({})
+      setShowModal(false)
+      setAlert({ type: 'success', message: 'Vaga publicada!' })
+    } catch (error) {
+      setAlert({
+        type: 'error',
+        message: error instanceof ApiError ? error.message : 'Não foi possível publicar a vaga.',
+      })
+    } finally {
+      setPublicando(false)
+      setTimeout(() => setAlert(null), 4000)
+    }
   }
 
-  function handleExcluir(id: string) {
+  async function handleExcluir(id: string) {
     setVagas(prev =>
       prev.map(v =>
         v.id === id
@@ -171,6 +253,16 @@ export function MinhasVagas() {
           : v
       )
     )
+
+    try {
+      await api.encerrarVaga(Number(id))
+    } catch (error) {
+      setAlert({
+        type: 'error',
+        message: error instanceof ApiError ? error.message : 'Não foi possível encerrar a vaga no servidor.',
+      })
+      setTimeout(() => setAlert(null), 4000)
+    }
   }
 
   function handleCancelar() {
@@ -243,8 +335,8 @@ export function MinhasVagas() {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/30 overflow-y-auto py-10">
-          <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl mx-4 p-8">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 overflow-y-auto pt-24 pb-10">
+          <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl mx-4 px-8 pb-8 pt-10">
             <h2 className="text-xl font-bold text-[var(--color-text)] mb-6">Nova vaga</h2>
 
             <div className="flex flex-col gap-5">
@@ -467,9 +559,10 @@ export function MinhasVagas() {
               </button>
               <button
                 onClick={handlePublicar}
-                className="px-5 py-2 rounded-lg text-sm font-medium bg-[var(--color-text)] text-white hover:opacity-90 transition-opacity"
+                disabled={publicando}
+                className="px-5 py-2 rounded-lg text-sm font-medium bg-[var(--color-text)] text-white hover:opacity-90 transition-opacity disabled:opacity-60"
               >
-                Publicar
+                {publicando ? 'Publicando...' : 'Publicar'}
               </button>
             </div>
           </div>

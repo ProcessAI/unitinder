@@ -559,3 +559,45 @@ const senhaCorreta = await bcrypt.compare(senhaDigitada, hashSalvo)
 | Registrar uma nova rota | `src/routes/*.routes.ts` + `src/app.ts` |
 | Mudar porta ou variável de ambiente | `.env` |
 | Instalar uma nova dependência | `npm install [pacote]` dentro de `apps/api/` |
+
+---
+
+## 12. Banco de dados real (Docker + Prisma)
+
+O schema do Prisma (`prisma/schema.prisma`) espelha exatamente o `infra/Unitinder.sql`. O acesso ao banco é feito via `src/lib/prisma.ts` (`PrismaClient` singleton) — nenhum controller usa SQL solto.
+
+```bash
+# Sobe Postgres de desenvolvimento (porta 5432) e de testes (porta 5433),
+# ambos já inicializados com o schema de infra/Unitinder.sql
+cd infra
+docker compose up -d
+
+# Na primeira vez (ou após mudar o schema.prisma)
+cd ../apps/api
+cp .env.example .env   # ajuste o DATABASE_URL se necessário
+npx prisma generate
+```
+
+Se o `schema.prisma` for alterado, confira que ele continua equivalente ao `infra/Unitinder.sql` com:
+
+```bash
+npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script
+```
+
+## 13. Login e CNPJ da empresa
+
+- **Estagiário** loga com `identificador` = e-mail.
+- **Empresa** loga com `identificador` = CNPJ (qualquer formatação — `00.000.000/0001-00` ou só números). O backend remove a máscara, exige **14 dígitos** e valida os dígitos verificadores antes de cadastrar ou autenticar (`src/utils/cnpj.ts`).
+- `POST /auth/login` recebe `{ identificador, senha }`: se o identificador tiver 14 dígitos numéricos, o login busca a empresa por CNPJ; caso contrário, busca o estagiário por e-mail.
+
+## 14. Testes automatizados
+
+Os testes (Vitest + Supertest) rodam contra o Postgres real de testes (`unitinder_test`, porta 5433) — sem mocks de banco.
+
+```bash
+cd infra && docker compose up -d        # garante o postgres_test no ar
+cd ../apps/api
+npm test
+```
+
+Cada teste começa com as tabelas truncadas (`tests/setup.ts`). Cobrem: cadastro/login de empresa por CNPJ (incluindo CNPJ inválido e duplicado), cadastro/login de estagiário por e-mail, e o fluxo completo de match (candidatura, bloqueio por papel, duplicidade, aceite/recusa, listagens).

@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: unitinder-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: unitinder
+    ports:
+      - '5432:5432'
+    volumes:
+      - unitinder_pg_data:/var/lib/postgresql/data
+      - ./docker-init/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+
+  postgres_test:
+    image: postgres:17-alpine
+    container_name: unitinder-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: unitinder_test
+    ports:
+      - '5433:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./docker-init/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+
+volumes:
+  unitinder_pg_data:
