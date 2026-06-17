@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Alert } from '@/components/Alert'
-import { api, getSession, ApiError } from '@/lib/api'
+import { getSession, ApiError } from '@/services/utils/http'
+import { listarVagas, criarVaga, encerrarVaga, adicionarHabilidadeVaga } from '@/services/VagasService'
+import { listarHabilidades } from '@/services/HabilidadesService'
+import { listarCandidatosPorVaga } from '@/services/MatchesService'
 
-const SKILLS = [
+const SKILLS_FALLBACK = [
   'Comunicação', 'Docker', 'Figma', 'Git', 'HTML/CSS',
   'Inglês', 'Java', 'JavaScript', 'Node.js', 'Proatividade',
   'Python', 'React', 'SQL', 'Trabalho em equipe', 'TypeScript', 'UX/UI Design',
@@ -117,6 +120,10 @@ function validate(form: FormData): FormErrors {
 }
 
 function mapVagaDaApi(v: any): Vaga {
+  const habilidades: string[] = Array.isArray(v.habilidades)
+    ? v.habilidades.map((h: any) => h.habilidade?.habilidade_nome ?? h.habilidade_nome ?? '')
+    : []
+
   return {
     id: String(v.id_vaga),
     titulo: v.vaga_titulo ?? '',
@@ -136,7 +143,7 @@ function mapVagaDaApi(v: any): Vaga {
     escolaridade: v.vaga_escolaridade_minima ?? '',
     experienciaMinima: v.vaga_experiencia_minima ?? '',
     pcd: v.vaga_pcd ? 'Sim' : 'Não',
-    habilidades: [],
+    habilidades,
     status: v.vaga_status === 'A' ? 'Ativa' : 'Inativa',
     dataPublicacao: v.vaga_created_at ?? new Date().toISOString(),
     dataAtualizacao: v.vaga_updated_at ?? new Date().toISOString(),
@@ -146,6 +153,7 @@ function mapVagaDaApi(v: any): Vaga {
 
 export function MinhasVagas() {
   const [vagas, setVagas] = useState<Vaga[]>([])
+  const [habilidadesDisponiveis, setHabilidadesDisponiveis] = useState<{ id: number; nome: string }[]>([])
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -153,16 +161,22 @@ export function MinhasVagas() {
   const [publicando, setPublicando] = useState(false)
 
   useEffect(() => {
+    listarHabilidades()
+      .then((lista) => setHabilidadesDisponiveis(lista.map((h: any) => ({ id: h.id_habilidade, nome: h.habilidade_nome }))))
+      .catch(() => setHabilidadesDisponiveis(SKILLS_FALLBACK.map((nome, i) => ({ id: -(i + 1), nome }))))
+  }, [])
+
+  useEffect(() => {
     const session = getSession()
     if (!session || session.role !== 'empresa') return
 
     async function carregar() {
       try {
-        const vagasApi = await api.listarVagas({ id_empresa_empresa: session!.id })
+        const vagasApi = await listarVagas({ id_empresa_empresa: session!.id })
         const vagasMapeadas = vagasApi.map(mapVagaDaApi)
 
         const contagens = await Promise.all(
-          vagasMapeadas.map((v) => api.listarCandidatosPorVaga(Number(v.id)).then((c) => c.length).catch(() => 0))
+          vagasMapeadas.map((v) => listarCandidatosPorVaga(Number(v.id)).then((c) => c.length).catch(() => 0))
         )
 
         setVagas(vagasMapeadas.map((v, index) => ({ ...v, matches: contagens[index] })))
@@ -209,7 +223,7 @@ export function MinhasVagas() {
     setPublicando(true)
 
     try {
-      const vagaCriada = await api.criarVaga({
+      const vagaCriada = await criarVaga({
         id_empresa_empresa: session.id,
         vaga_titulo: form.titulo,
         vaga_descricao: form.descricao,
@@ -229,7 +243,23 @@ export function MinhasVagas() {
         vaga_prazo_candidatura: form.prazoCandidatura || undefined,
       })
 
-      setVagas(prev => [{ ...mapVagaDaApi(vagaCriada), habilidades: form.habilidades }, ...prev])
+      const idVaga = vagaCriada.id_vaga
+      if (form.habilidades.length > 0) {
+        await Promise.allSettled(
+          form.habilidades.map((nome) => {
+            const habilidade = habilidadesDisponiveis.find((h) => h.nome === nome)
+            if (habilidade && habilidade.id > 0) {
+              return adicionarHabilidadeVaga(idVaga, habilidade.id)
+            }
+          })
+        )
+      }
+
+      const vagaComHabilidades = await listarVagas({ id_empresa_empresa: session.id })
+        .then((lista) => lista.find((v: any) => v.id_vaga === idVaga))
+        .catch(() => vagaCriada)
+
+      setVagas(prev => [mapVagaDaApi(vagaComHabilidades ?? vagaCriada), ...prev])
       setForm(emptyForm)
       setErrors({})
       setShowModal(false)
@@ -255,7 +285,7 @@ export function MinhasVagas() {
     )
 
     try {
-      await api.encerrarVaga(Number(id))
+      await encerrarVaga(Number(id))
     } catch (error) {
       setAlert({
         type: 'error',
@@ -322,6 +352,16 @@ export function MinhasVagas() {
                   Excluir
                 </button>
               </div>
+
+              {vaga.habilidades.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {vaga.habilidades.map((h) => (
+                    <span key={h} className="text-xs bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] px-2 py-0.5 rounded-full">
+                      {h}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
                 <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1">
@@ -528,25 +568,27 @@ export function MinhasVagas() {
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)] mb-3">Habilidades</p>
                 <div className="flex flex-wrap gap-2">
-                  {SKILLS.map(skill => {
-                    const selected = form.habilidades.includes(skill)
+                  {(habilidadesDisponiveis.length > 0
+                    ? habilidadesDisponiveis
+                    : SKILLS_FALLBACK.map((nome, i) => ({ id: -(i + 1), nome }))
+                  ).map(({ nome }) => {
+                    const selected = form.habilidades.includes(nome)
                     return (
                       <button
-                        key={skill}
+                        key={nome}
                         type="button"
-                        onClick={() => toggleHabilidade(skill)}
+                        onClick={() => toggleHabilidade(nome)}
                         className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                           selected
                             ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
                             : 'bg-white border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-primary)]'
                         }`}
                       >
-                        {skill}
+                        {nome}
                       </button>
                     )
                   })}
                 </div>
-                <p className="text-xs text-[var(--color-text-muted)] mt-2">Selecione e salve o formulário.</p>
               </div>
             </div>
 

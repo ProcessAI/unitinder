@@ -39,7 +39,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const session = getSession()
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -96,12 +96,6 @@ export const api = {
     return request<any[]>(`/vagas${query}`)
   },
 
-  criarVaga: (dados: Record<string, unknown>) =>
-    request<any>('/vagas', { method: 'POST', body: JSON.stringify(dados) }),
-
-  encerrarVaga: (idVaga: number) =>
-    request<any>(`/vagas/${idVaga}`, { method: 'PUT', body: JSON.stringify({ vaga_status: 'F' }) }),
-
   criarMatch: (idEstagiario: number, idVaga: number) =>
     request<any>('/matches', {
       method: 'POST',
@@ -111,7 +105,8 @@ export const api = {
   listarMatchesPorEstagiario: (idEstagiario: number) =>
     request<any[]>(`/matches/estagiario/${idEstagiario}`),
 
-  listarCandidatosPorVaga: (idVaga: number) => request<any[]>(`/matches/vaga/${idVaga}`),
+  listarCandidatosPorVaga: (idVaga: number) =>
+    request<any[]>(`/matches/vaga/${idVaga}`),
 
   atualizarStatusMatch: (idMatch: number, status: 'aceito' | 'recusado') =>
     request<any>(`/matches/${idMatch}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),

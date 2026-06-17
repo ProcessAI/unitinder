@@ -4,43 +4,39 @@ import { prisma } from '../lib/prisma'
 export const VagaController = {
   listar: async (req: Request, res: Response) => {
     try {
-      // TODO: buscar todas as vagas no banco de dados
-      // Exemplo futuro:
-      // const vagas = await VagaRepository.listar()
+      const id_empresa = req.query.id_empresa_empresa ? Number(req.query.id_empresa_empresa) : undefined
 
-      return res.status(501).json({
-        mensagem: 'Listagem de vagas ainda nao integrada ao banco de dados.',
+      const vagas = await prisma.vaga.findMany({
+        where: id_empresa ? { id_empresa_empresa: id_empresa } : undefined,
+        include: { habilidades: { include: { habilidade: true } } },
+        orderBy: { vaga_created_at: 'desc' },
       })
+
+      return res.json(vagas)
     } catch (error) {
-      return res.status(500).json({
-        mensagem: 'Erro ao listar vagas.',
-      })
+      console.error(error)
+      return res.status(500).json({ mensagem: 'Erro ao listar vagas.' })
     }
   },
 
   buscarPorId: async (req: Request, res: Response) => {
     try {
-      const { id } = req.params
+      const id = Number(req.params.id)
 
-      if (!id) {
-        return res.status(400).json({
-          mensagem: 'Id da vaga e obrigatorio.',
-        })
+      const vaga = await prisma.vaga.findUnique({
+        where: { id_vaga: id },
+        include: { habilidades: { include: { habilidade: true } } },
+      })
+
+      if (!vaga) {
+        return res.status(404).json({ mensagem: 'Vaga não encontrada.' })
       }
 
-      // TODO: buscar vaga por id no banco de dados
-      // Exemplo futuro:
-      // const vaga = await VagaRepository.buscarPorId(Number(id))
-
-      return res.status(501).json({
-        mensagem: 'Busca de vaga por id ainda nao integrada ao banco de dados.',
-      })
+      return res.json(vaga)
     } catch (error) {
-      return res.status(500).json({
-        mensagem: 'Erro ao buscar vaga.',
-      })
+      console.error(error)
+      return res.status(500).json({ mensagem: 'Erro ao buscar vaga.' })
     }
-
   },
 
   criar: async (req: Request, res: Response) => {
@@ -56,85 +52,94 @@ export const VagaController = {
         vaga_qtd_vagas,
         vaga_carga_horaria,
         id_empresa_empresa,
+        vaga_pcd,
+        vaga_salario_min,
+        vaga_salario_max,
+        vaga_beneficios,
+        vaga_escolaridade_minima,
+        vaga_experiencia_minima,
+        vaga_prazo_candidatura,
       } = req.body
 
-      if (
-        !vaga_titulo ||
-        !vaga_descricao ||
-        !vaga_area ||
-        !vaga_localidade ||
-        !vaga_modelo_trabalho ||
-        !vaga_tipo_contrato ||
-        !vaga_nivel ||
-        !vaga_qtd_vagas ||
-        !vaga_carga_horaria ||
-        !id_empresa_empresa
-      ) {
-        return res.status(400).json({
-          mensagem: 'Preencha todos os campos obrigatorios da vaga.',
-        })
+      if (!vaga_titulo || !vaga_descricao || !vaga_area || !vaga_localidade ||
+          !vaga_modelo_trabalho || !vaga_tipo_contrato || !vaga_nivel ||
+          !vaga_qtd_vagas || !id_empresa_empresa) {
+        return res.status(400).json({ mensagem: 'Preencha todos os campos obrigatórios da vaga.' })
       }
 
-      // TODO: criar vaga no banco de dados
-      // Exemplo futuro:
-      // const novaVaga = await VagaRepository.criar(req.body)
+      const vaga = await prisma.vaga.create({
+        data: {
+          vaga_titulo,
+          vaga_descricao,
+          vaga_area,
+          vaga_localidade,
+          vaga_modelo_trabalho,
+          vaga_tipo_contrato,
+          vaga_nivel,
+          vaga_qtd_vagas: Number(vaga_qtd_vagas),
+          vaga_carga_horaria,
+          id_empresa_empresa: Number(id_empresa_empresa),
+          vaga_pcd: vaga_pcd ?? false,
+          vaga_salario_min: vaga_salario_min ?? null,
+          vaga_salario_max: vaga_salario_max ?? null,
+          vaga_beneficios: vaga_beneficios ?? null,
+          vaga_escolaridade_minima: vaga_escolaridade_minima ?? null,
+          vaga_experiencia_minima: vaga_experiencia_minima ?? null,
+          vaga_prazo_candidatura: vaga_prazo_candidatura ? new Date(vaga_prazo_candidatura) : null,
+          vaga_data_publicacao: new Date(),
+        },
+        include: { habilidades: { include: { habilidade: true } } },
+      })
 
-      return res.status(501).json({
-        mensagem: 'Criacao de vaga ainda nao integrada ao banco de dados.',
-      })
+      return res.status(201).json(vaga)
     } catch (error) {
-      return res.status(500).json({
-        mensagem: 'Erro ao criar vaga.',
-      })
+      console.error(error)
+      return res.status(500).json({ mensagem: 'Erro ao criar vaga.' })
     }
   },
 
   atualizar: async (req: Request, res: Response) => {
     try {
-      const { id } = req.params
+      const id = Number(req.params.id)
 
-      if (!id) {
-        return res.status(400).json({
-          mensagem: 'Id da vaga e obrigatorio.',
-        })
+      const vagaAtual = await prisma.vaga.findUnique({ where: { id_vaga: id } })
+      if (!vagaAtual) {
+        return res.status(404).json({ mensagem: 'Vaga não encontrada.' })
       }
-      // TODO: atualizar vaga no banco de dados
-      // Exemplo futuro:
-      // const vagaAtualizada = await VagaRepository.atualizar(Number(id), req.body)
 
-      return res.status(501).json({
-        mensagem: 'Atualizacao de vaga ainda nao integrada ao banco de dados.',
+      const dados = { ...req.body, vaga_updated_at: new Date() }
+      if (dados.vaga_prazo_candidatura) {
+        dados.vaga_prazo_candidatura = new Date(dados.vaga_prazo_candidatura)
+      }
+
+      const vaga = await prisma.vaga.update({
+        where: { id_vaga: id },
+        data: dados,
+        include: { habilidades: { include: { habilidade: true } } },
       })
+
+      return res.json(vaga)
     } catch (error) {
-      return res.status(500).json({
-        mensagem: 'Erro ao atualizar vaga.',
-      })
+      console.error(error)
+      return res.status(500).json({ mensagem: 'Erro ao atualizar vaga.' })
     }
   },
 
   deletar: async (req: Request, res: Response) => {
     try {
-    const { id } = req.params
+      const id = Number(req.params.id)
 
-    if (!id) {
-      return res.status(400).json({
-        mensagem: 'Id da vaga e obrigatorio.',
-      })
-    }
+      const vaga = await prisma.vaga.findUnique({ where: { id_vaga: id } })
+      if (!vaga) {
+        return res.status(404).json({ mensagem: 'Vaga não encontrada.' })
+      }
 
-    // TODO: remover vaga do banco de dados
-    // Exemplo futuro:
-    // await VagaRepository.deletar(Number(id))
-
-    return res.status(501).json({
-      mensagem: 'Remocao de vaga ainda nao integrada ao banco de dados.',
-    })
+      await prisma.vaga.delete({ where: { id_vaga: id } })
+      return res.status(204).send()
     } catch (error) {
-      return res.status(500).json({
-        mensagem: 'Erro ao remover vaga.',
-      })
+      console.error(error)
+      return res.status(500).json({ mensagem: 'Erro ao remover vaga.' })
     }
-
   },
 
   listarHabilidades: async (req: Request, res: Response) => {

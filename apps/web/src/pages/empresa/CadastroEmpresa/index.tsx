@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert } from '@/components/Alert'
-import { api, saveSession, ApiError } from '@/lib/api'
+import { api, saveSession, ApiError } from '@/services/utils/http'
 
 type FormData = {
   nomeEmpresa: string
