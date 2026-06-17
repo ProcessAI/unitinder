@@ -11,13 +11,13 @@ router.get('/', VagaController.listar)
 router.get('/:id', VagaController.buscarPorId)
 
 // POST /vagas
-router.post('/', authMiddleware, requireRole('empresa'), VagaController.criar)
+router.post('/', VagaController.criar)
 
 // PUT /vagas/:id
-router.put('/:id', authMiddleware, requireRole('empresa'), VagaController.atualizar)
+router.put('/:id', VagaController.atualizar)
 
 // DELETE /vagas/:id
-router.delete('/:id', authMiddleware, requireRole('empresa'), VagaController.deletar)
+router.delete('/:id', VagaController.deletar)
 
 // GET /vagas/:id/habilidades — habilidades exigidas pela vaga
 router.get('/:id/habilidades', VagaController.listarHabilidades)

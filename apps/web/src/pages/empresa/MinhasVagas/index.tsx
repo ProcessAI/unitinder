@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Alert } from '@/components/Alert'
 import { getSession, ApiError } from '@/services/utils/http'
-import { listarVagas, criarVaga, encerrarVaga, adicionarHabilidadeVaga } from '@/services/VagasService'
+import { listarVagas, criarVaga, atualizarVaga, encerrarVaga, adicionarHabilidadeVaga } from '@/services/VagasService'
 import { listarHabilidades } from '@/services/HabilidadesService'
 import { listarCandidatosPorVaga } from '@/services/MatchesService'
 
@@ -101,6 +101,8 @@ function validate(form: FormData): FormErrors {
     errors.descricao = 'Obrigatório.'
   } else if (form.descricao.trim().length < 300) {
     errors.descricao = `Mínimo 300 caracteres. (${form.descricao.trim().length}/300)`
+  } else if (form.descricao.trim().length > 2000) {
+    errors.descricao = `Máximo 2000 caracteres. (${form.descricao.trim().length}/2000)`
   }
 
   if (!form.area.trim()) errors.area = 'Obrigatório.'
@@ -155,6 +157,7 @@ export function MinhasVagas() {
   const [vagas, setVagas] = useState<Vaga[]>([])
   const [habilidadesDisponiveis, setHabilidadesDisponiveis] = useState<{ id: number; nome: string }[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [vagaEditando, setVagaEditando] = useState<Vaga | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [errors, setErrors] = useState<FormErrors>({})
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -220,11 +223,12 @@ export function MinhasVagas() {
       return
     }
 
+    const idEmpresa = session.id
     setPublicando(true)
 
     try {
       const vagaCriada = await criarVaga({
-        id_empresa_empresa: session.id,
+        id_empresa_empresa: idEmpresa,
         vaga_titulo: form.titulo,
         vaga_descricao: form.descricao,
         vaga_area: form.area,
@@ -275,6 +279,84 @@ export function MinhasVagas() {
     }
   }
 
+  function handleEditar(vaga: Vaga) {
+    setVagaEditando(vaga)
+    setForm({
+      titulo: vaga.titulo,
+      descricao: vaga.descricao,
+      area: vaga.area,
+      localidade: vaga.localidade,
+      modelo: vaga.modelo,
+      tipoContrato: vaga.tipoContrato,
+      nivel: vaga.nivel,
+      salarioMin: vaga.salarioMin,
+      salarioMax: vaga.salarioMax,
+      quantidadeVagas: vaga.quantidadeVagas,
+      prazoCandidatura: vaga.prazoCandidatura,
+      beneficios: vaga.beneficios,
+      cargaHoraria: vaga.cargaHoraria,
+      horarioTrabalho: vaga.horarioTrabalho,
+      escolaridade: vaga.escolaridade,
+      experienciaMinima: vaga.experienciaMinima,
+      pcd: vaga.pcd,
+      habilidades: vaga.habilidades,
+    })
+    setShowModal(true)
+  }
+
+  async function handleSalvarEdicao() {
+    const errs = validate(form)
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      setAlert({ type: 'error', message: 'Corrija os erros antes de salvar.' })
+      setTimeout(() => setAlert(null), 4000)
+      return
+    }
+
+    if (!vagaEditando) return
+    setPublicando(true)
+
+    try {
+      await atualizarVaga(Number(vagaEditando.id), {
+        vaga_titulo: form.titulo,
+        vaga_descricao: form.descricao,
+        vaga_area: form.area,
+        vaga_localidade: form.localidade,
+        vaga_modelo_trabalho: form.modelo,
+        vaga_tipo_contrato: form.tipoContrato,
+        vaga_nivel: form.nivel,
+        vaga_qtd_vagas: Number(form.quantidadeVagas),
+        vaga_pcd: form.pcd === 'Sim',
+        vaga_salario_min: form.salarioMin ? Number(form.salarioMin) : null,
+        vaga_salario_max: form.salarioMax ? Number(form.salarioMax) : null,
+        vaga_beneficios: form.beneficios,
+        vaga_carga_horaria: form.cargaHoraria,
+        vaga_escolaridade_minima: form.escolaridade,
+        vaga_experiencia_minima: form.experienciaMinima,
+        vaga_prazo_candidatura: form.prazoCandidatura || null,
+      })
+
+      setVagas(prev => prev.map(v =>
+        v.id === vagaEditando.id
+          ? { ...v, ...form, habilidades: form.habilidades }
+          : v
+      ))
+      setShowModal(false)
+      setVagaEditando(null)
+      setForm(emptyForm)
+      setErrors({})
+      setAlert({ type: 'success', message: 'Vaga atualizada!' })
+    } catch (error) {
+      setAlert({
+        type: 'error',
+        message: error instanceof ApiError ? error.message : 'Não foi possível atualizar a vaga.',
+      })
+    } finally {
+      setPublicando(false)
+      setTimeout(() => setAlert(null), 4000)
+    }
+  }
+
   async function handleExcluir(id: string) {
     setVagas(prev =>
       prev.map(v =>
@@ -297,6 +379,7 @@ export function MinhasVagas() {
 
   function handleCancelar() {
     setShowModal(false)
+    setVagaEditando(null)
     setForm(emptyForm)
     setErrors({})
   }
@@ -342,15 +425,23 @@ export function MinhasVagas() {
                     <p className="text-xs text-[var(--color-text-muted)] mt-0.5">📍 {vaga.localidade}</p>
                   )}
                   {vaga.descricao && (
-                    <p className="text-sm text-[var(--color-text)] mt-2 line-clamp-2">{vaga.descricao}</p>
+                    <p className="text-sm text-[var(--color-text)] mt-2 line-clamp-2 break-all">{vaga.descricao}</p>
                   )}
                 </div>
-                <button
-                  onClick={() => handleExcluir(vaga.id)}
-                  className="text-[var(--color-error)] text-sm font-medium hover:opacity-80 transition-opacity ml-4 shrink-0"
-                >
-                  Excluir
-                </button>
+                <div className="flex gap-3 ml-4 shrink-0">
+                  <button
+                    onClick={() => handleEditar(vaga)}
+                    className="text-[var(--color-primary)] text-sm font-medium hover:opacity-80 transition-opacity"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleExcluir(vaga.id)}
+                    className="text-[var(--color-error)] text-sm font-medium hover:opacity-80 transition-opacity"
+                  >
+                    Excluir
+                  </button>
+                </div>
               </div>
 
               {vaga.habilidades.length > 0 && (
@@ -377,7 +468,7 @@ export function MinhasVagas() {
       {showModal && (
         <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 overflow-y-auto pt-24 pb-10">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl mx-4 px-8 pb-8 pt-10">
-            <h2 className="text-xl font-bold text-[var(--color-text)] mb-6">Nova vaga</h2>
+            <h2 className="text-xl font-bold text-[var(--color-text)] mb-6">{vagaEditando ? 'Editar vaga' : 'Nova vaga'}</h2>
 
             <div className="flex flex-col gap-5">
 
@@ -394,7 +485,7 @@ export function MinhasVagas() {
               </Field>
 
               {/* Descrição */}
-              <Field label="Descrição *" error={errors.descricao} hint={`${form.descricao.length}/300 mín`}>
+              <Field label="Descrição *" error={errors.descricao} hint={`${form.descricao.length}/2000`}>
                 <textarea
                   value={form.descricao}
                   onChange={e => set('descricao', e.target.value)}
@@ -600,11 +691,11 @@ export function MinhasVagas() {
                 Cancelar
               </button>
               <button
-                onClick={handlePublicar}
+                onClick={vagaEditando ? handleSalvarEdicao : handlePublicar}
                 disabled={publicando}
                 className="px-5 py-2 rounded-lg text-sm font-medium bg-[var(--color-text)] text-white hover:opacity-90 transition-opacity disabled:opacity-60"
               >
-                {publicando ? 'Publicando...' : 'Publicar'}
+                {publicando ? 'Salvando...' : vagaEditando ? 'Salvar' : 'Publicar'}
               </button>
             </div>
           </div>
