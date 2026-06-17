@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import { prisma } from '../lib/prisma'
 
 export const VagaController = {
   listar: async (req: Request, res: Response) => {
@@ -138,93 +139,84 @@ export const VagaController = {
 
   listarHabilidades: async (req: Request, res: Response) => {
     try {
-    const { id } = req.params
+      const id = Number(req.params.id)
 
-    if (!id) {
-      return res.status(400).json({
-        mensagem: 'Id da vaga e obrigatorio.',
+      const vaga = await prisma.vaga.findUnique({ where: { id_vaga: id } })
+      if (!vaga) {
+        return res.status(404).json({ mensagem: 'Vaga não encontrada.' })
+      }
+
+      const registros = await prisma.rlVagaHabilidade.findMany({
+        where: { id_vaga: id },
+        include: { habilidade: true },
       })
-    }
 
-    // TODO: listar habilidades da vaga no banco de dados
-    // Exemplo futuro:
-    // const habilidades = await VagaRepository.listarHabilidades(Number(id))
-
-    return res.status(501).json({
-      mensagem: 'Listagem de habilidades ainda nao integrada ao banco de dados.',
-    })
+      return res.json(registros.map((r) => r.habilidade))
     } catch (error) {
-      return res.status(500).json({
-        mensagem: 'Erro ao listar habilidades da vaga.',
-      })
+      console.error(error)
+      return res.status(500).json({ mensagem: 'Erro ao listar habilidades da vaga.' })
     }
-
   },
 
   adicionarHabilidade: async (req: Request, res: Response) => {
     try {
-    const { id } = req.params
-    const { id_habilidade } = req.body
+      const id = Number(req.params.id)
+      const { id_habilidade } = req.body as { id_habilidade?: number }
 
-    if (!id) {
-      return res.status(400).json({
-        mensagem: 'Id da vaga e obrigatorio.',
+      if (!id_habilidade) {
+        return res.status(400).json({ mensagem: 'id_habilidade é obrigatório.' })
+      }
+
+      const vaga = await prisma.vaga.findUnique({ where: { id_vaga: id } })
+      if (!vaga) {
+        return res.status(404).json({ mensagem: 'Vaga não encontrada.' })
+      }
+
+      const habilidade = await prisma.habilidade.findUnique({ where: { id_habilidade } })
+      if (!habilidade) {
+        return res.status(404).json({ mensagem: 'Habilidade não encontrada.' })
+      }
+
+      const jaExiste = await prisma.rlVagaHabilidade.findFirst({
+        where: { id_vaga: id, id_habilidade },
       })
-    }
+      if (jaExiste) {
+        return res.status(409).json({ mensagem: 'Habilidade já associada a esta vaga.' })
+      }
 
-    if (!id_habilidade) {
-      return res.status(400).json({
-        mensagem: 'Id da habilidade e obrigatorio.',
+      const associacao = await prisma.rlVagaHabilidade.create({
+        data: { id_vaga: id, id_habilidade },
+        include: { habilidade: true },
       })
-    }
 
-    // TODO: associar habilidade a vaga no banco de dados
-    // Exemplo futuro:
-    // await VagaRepository.adicionarHabilidade(
-    //   Number(id),
-    //   Number(id_habilidade)
-    // )
-
-    return res.status(501).json({
-      mensagem: 'Adicao de habilidade ainda nao integrada ao banco de dados.',
-    })
+      return res.status(201).json(associacao)
     } catch (error) {
-      return res.status(500).json({
-        mensagem: 'Erro ao adicionar habilidade.',
-      })
+      console.error(error)
+      return res.status(500).json({ mensagem: 'Erro ao adicionar habilidade à vaga.' })
     }
   },
-  
+
   removerHabilidade: async (req: Request, res: Response) => {
     try {
-    const { id, idHabilidade } = req.params
+      const id = Number(req.params.id)
+      const idHabilidade = Number(req.params.habilidadeId)
 
-    if (!id) {
-      return res.status(400).json({
-        mensagem: 'Id da vaga e obrigatorio.',
+      const associacao = await prisma.rlVagaHabilidade.findFirst({
+        where: { id_vaga: id, id_habilidade: idHabilidade },
       })
-    }
 
-    if (!idHabilidade) {
-      return res.status(400).json({
-        mensagem: 'Id da habilidade e obrigatorio.',
+      if (!associacao) {
+        return res.status(404).json({ mensagem: 'Associação não encontrada.' })
+      }
+
+      await prisma.rlVagaHabilidade.delete({
+        where: { id_vaga_habilidade: associacao.id_vaga_habilidade },
       })
-    }
 
-    // TODO: remover associacao da habilidade com a vaga
-    // Exemplo futuro:
-    // await VagaRepository.removerHabilidade(
-    //   Number(id),
-    //   Number(idHabilidade)
-    // )
-
-    return res.status(501).json({
-      mensagem: 'Remocao de habilidade ainda nao integrada ao banco de dados.',
-    })
+      return res.status(204).send()
     } catch (error) {
-      return res.status(500).json({
-        mensagem: 'Erro ao remover habilidade.',
-      })
+      console.error(error)
+      return res.status(500).json({ mensagem: 'Erro ao remover habilidade da vaga.' })
     }
   },
 }
