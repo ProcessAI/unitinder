@@ -57,17 +57,25 @@ export function Login() {
 
   return (
     <div className="min-h-screen bg-[#F1F5F7]">
-      <header className="flex h-14 items-center justify-between bg-white px-10 shadow-sm">
-        <img
-          src={logo}
-          alt="UniTinder"
-          className="h-8"
-        />
+<header className="flex h-14 items-center gap-4 bg-white px-10 shadow-sm">
+  <button
+    type="button"
+    onClick={() => navigate('/')}
+    className="flex items-center gap-1 text-sm font-medium text-[#1F4068] hover:underline"
+  >
+    ← Voltar
+  </button>
 
-        <span className="text-sm font-medium text-[#1F4068]">
-          Entrar
-        </span>
-      </header>
+  <img
+    src={logo}
+    alt="UniTinder"
+    className="h-8"
+  />
+
+  <span className="ml-auto text-sm font-medium text-[#1F4068]">
+    Entrar
+  </span>
+</header>
 
       <main className="flex flex-col items-center pt-10">
         <img
