@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import { EmpresaLayout } from '@/layouts/EmpresaLayout'
 import { UsuarioLayout } from '@/layouts/UsuarioLayout'
+import { CadastroLayout } from '@/layouts/CadastroLayout'
 import { CadastroEmpresa } from '@/pages/empresa/CadastroEmpresa'
 
 import { Login } from '@/pages/Login'
@@ -19,6 +20,11 @@ import { CadastroEstagiario } from '@/pages/usuario/CadastroEstagiario'
 import { CadastroHabilidade } from '@/pages/usuario/CadastroHabilidade'
 
 export const router = createBrowserRouter([
+  {
+    path: '/empresa/cadastro',
+    element: <CadastroLayout />,
+    children: [{ index: true, element: <CadastroEmpresa /> }],
+  },
   {
     path: '/empresa',
     element: <EmpresaLayout />,
