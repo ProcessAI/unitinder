@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logo from '@/assets/logo.png'
-import { api, saveSession, ApiError } from '@/lib/api'
+import { api, saveSession, ApiError } from '@/services/utils/http'
 import { Alert } from '@/components/Alert'
 
 function formatarCnpj(valor: string) {

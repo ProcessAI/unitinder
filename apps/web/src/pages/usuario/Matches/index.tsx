@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert } from '@/components/Alert'
-import { api, getSession, ApiError } from '@/lib/api'
+import { api, getSession, ApiError } from '@/services/utils/http'
 
 type MatchStatus = 'ativo' | 'encerrado'
 
