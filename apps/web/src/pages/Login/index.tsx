@@ -126,18 +126,16 @@ export function Login() {
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
 
-          {isEmpresa && (
-            <p className="mt-4 text-center text-sm text-gray-500">
-              Não tem conta?{' '}
-              <button
-                type="button"
-                onClick={() => navigate('/empresa/cadastro')}
-                className="font-medium text-[#1F4068] hover:underline"
-              >
-                Cadastre-se
-              </button>
-            </p>
-          )}
+          <p className="mt-4 text-center text-sm text-gray-500">
+            Não tem conta?{' '}
+            <button
+              type="button"
+              onClick={() => navigate(isEmpresa ? '/empresa/cadastro' : '/usuario/cadastro')}
+              className="font-medium text-[#1F4068] hover:underline"
+            >
+              Cadastre-se
+            </button>
+          </p>
         </div>
       </main>
     </div>

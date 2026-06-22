@@ -75,7 +75,38 @@ function validar(f: FormData): FormErrors {
   if (!f.senha) e.senha = 'Senha obrigatória.'
   else if (f.senha.length < 8) e.senha = 'Mínimo 8 caracteres.'
   if (f.senha !== f.confirmar_senha) e.confirmar_senha = 'Senhas não coincidem.'
-  if (!f.data_nascimento) e.data_nascimento = 'Data de nascimento obrigatória.'
+  if (!f.data_nascimento) {
+    e.data_nascimento = 'Data de nascimento obrigatória.'
+  } else {
+    const nascimento = new Date(f.data_nascimento)
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+
+    if (nascimento > hoje) {
+      e.data_nascimento = 'Data de nascimento não pode ser no futuro.'
+    } else {
+      const idade = hoje.getFullYear() - nascimento.getFullYear()
+      const aindaNaoFezAniversario =
+        hoje.getMonth() < nascimento.getMonth() ||
+        (hoje.getMonth() === nascimento.getMonth() && hoje.getDate() < nascimento.getDate())
+      const idadeReal = aindaNaoFezAniversario ? idade - 1 : idade
+
+      if (idadeReal < 14) {
+        e.data_nascimento = 'Idade mínima de 14 anos para se cadastrar.'
+      }
+    }
+  }
+
+  if (f.previsao_formatura) {
+    const formatura = new Date(f.previsao_formatura)
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+
+    if (formatura < hoje) {
+      e.previsao_formatura = 'Previsão de formatura não pode estar no passado.'
+    }
+  }
+
   return e
 }
 
@@ -191,19 +222,19 @@ export function CadastroEstagiario() {
     }
   }
 
-    return (
+  return (
     <>
-        <style>{css}</style>
+      <style>{css}</style>
 
-        {sucesso ? (
-        <div className="mx-auto w-full max-w-lg text-center pt-16">
-            <div className="sucesso-emoji">🎉</div>
-            <h1 className="cad-title">Perfil criado com sucesso!</h1>
-            <p style={{ color: '#5f8aa0', marginTop: 8 }}>Bem-vindo ao UniTinder.</p>
+      {sucesso ? (
+        <div className="cad-inner sucesso">
+          <div className="sucesso-emoji">🎉</div>
+          <h1 className="cad-title">Perfil criado com sucesso!</h1>
+          <p style={{ color: '#5f8aa0', marginTop: 8, textAlign: 'center' }}>Bem-vindo ao UniTinder.</p>
         </div>
-        ) : (
-        <main className="mx-auto w-full max-w-lg">
-            <h1 className="cad-title">Cadastro de estagiário</h1>
+      ) : (
+        <main className="cad-inner">
+          <h1 className="cad-title">Cadastro de estagiário</h1>
 
           {/* CONTA */}
           <Secao titulo="Conta">
@@ -290,7 +321,7 @@ export function CadastroEstagiario() {
               </Campo>
             </div>
             <div className="row r2">
-              <Campo id="previsao_formatura" label="Previsão de formatura">
+              <Campo id="previsao_formatura" label="Previsão de formatura" erro={erros.previsao_formatura}>
                 <input id="previsao_formatura" name="previsao_formatura" type="date" value={form.previsao_formatura} onChange={handleChange}/>
               </Campo>
               <Campo id="turno" label="Turno">
