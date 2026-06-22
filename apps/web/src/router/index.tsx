@@ -47,6 +47,11 @@ export const router = createBrowserRouter([
 },
 
 {
+    path: '/usuario/cadastro',
+    element: <CadastroLayout />,
+    children: [{ index: true, element: <CadastroEstagiario /> }],
+  },
+{
   path: '/usuario',
   element: <UsuarioLayout />,
   children: [
