@@ -82,7 +82,7 @@ model Estagiario {
 model Vaga {
   id_vaga                  Int       @id @default(autoincrement())
   vaga_titulo              String    @db.VarChar(150)
-  vaga_descricao           String?   @db.VarChar(2000)
+  vaga_descricao           String?  
   vaga_area                String?   @db.VarChar(80)
   vaga_localidade          String?   @db.VarChar(120)
   vaga_modelo_trabalho     String?   @db.VarChar(20)
