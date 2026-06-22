@@ -85,6 +85,20 @@ export const api = {
       { method: 'POST', body: JSON.stringify(dados) }
     ),
 
+    buscarEmpresa: (id: number) =>
+  request<any>(`/empresas/${id}`),
+
+atualizarEmpresa: (id: number, dados: {
+  nomeEmpresa?: string
+  setor?: string
+  cidade?: string
+  descricao?: string
+}) =>
+  request<any>(`/empresas/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(dados),
+  }),
+
   registroUsuario: (dados: { nome: string; email: string; senha: string; cpf: string }) =>
     request<{ token: string; role: Role; estagiario: { id: number; nome: string; email: string } }>(
       '/auth/registro/usuario',
