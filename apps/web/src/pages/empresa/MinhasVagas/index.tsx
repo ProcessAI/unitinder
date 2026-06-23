@@ -1,14 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Alert } from '@/components/Alert'
 import { getSession, ApiError } from '@/services/utils/http'
-import { listarVagas, criarVaga, atualizarVaga, encerrarVaga, adicionarHabilidadeVaga } from '@/services/VagasService'
+import {
+  listarVagas,
+  criarVaga,
+  atualizarVaga,
+  encerrarVaga,
+  adicionarHabilidadeVaga,
+} from '@/services/VagasService'
 import { listarHabilidades } from '@/services/HabilidadesService'
 import { listarCandidatosPorVaga } from '@/services/MatchesService'
 
 const SKILLS_FALLBACK = [
-  'Comunicação', 'Docker', 'Figma', 'Git', 'HTML/CSS',
-  'Inglês', 'Java', 'JavaScript', 'Node.js', 'Proatividade',
-  'Python', 'React', 'SQL', 'Trabalho em equipe', 'TypeScript', 'UX/UI Design',
+  'Comunicação',
+  'Docker',
+  'Figma',
+  'Git',
+  'HTML/CSS',
+  'Inglês',
+  'Java',
+  'JavaScript',
+  'Node.js',
+  'Proatividade',
+  'Python',
+  'React',
+  'SQL',
+  'Trabalho em equipe',
+  'TypeScript',
+  'UX/UI Design',
 ]
 
 const WORK_MODELS = ['Presencial', 'Híbrido', 'Remoto']
@@ -135,10 +154,21 @@ function mapVagaDaApi(v: any): Vaga {
     modelo: v.vaga_modelo_trabalho ?? '',
     tipoContrato: v.vaga_tipo_contrato ?? '',
     nivel: v.vaga_nivel ?? '',
-    salarioMin: v.vaga_salario_min !== null && v.vaga_salario_min !== undefined ? String(v.vaga_salario_min) : '',
-    salarioMax: v.vaga_salario_max !== null && v.vaga_salario_max !== undefined ? String(v.vaga_salario_max) : '',
-    quantidadeVagas: v.vaga_qtd_vagas !== null && v.vaga_qtd_vagas !== undefined ? String(v.vaga_qtd_vagas) : '',
-    prazoCandidatura: v.vaga_prazo_candidatura ? String(v.vaga_prazo_candidatura).slice(0, 10) : '',
+    salarioMin:
+      v.vaga_salario_min !== null && v.vaga_salario_min !== undefined
+        ? String(v.vaga_salario_min)
+        : '',
+    salarioMax:
+      v.vaga_salario_max !== null && v.vaga_salario_max !== undefined
+        ? String(v.vaga_salario_max)
+        : '',
+    quantidadeVagas:
+      v.vaga_qtd_vagas !== null && v.vaga_qtd_vagas !== undefined
+        ? String(v.vaga_qtd_vagas)
+        : '',
+    prazoCandidatura: v.vaga_prazo_candidatura
+      ? String(v.vaga_prazo_candidatura).slice(0, 10)
+      : '',
     beneficios: v.vaga_beneficios ?? '',
     cargaHoraria: v.vaga_carga_horaria ?? '',
     horarioTrabalho: '',
@@ -155,7 +185,9 @@ function mapVagaDaApi(v: any): Vaga {
 
 export function MinhasVagas() {
   const [vagas, setVagas] = useState<Vaga[]>([])
-  const [habilidadesDisponiveis, setHabilidadesDisponiveis] = useState<{ id: number; nome: string }[]>([])
+  const [habilidadesDisponiveis, setHabilidadesDisponiveis] = useState<
+    { id: number; nome: string }[]
+  >([])
   const [showModal, setShowModal] = useState(false)
   const [vagaEditando, setVagaEditando] = useState<Vaga | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm)
@@ -165,8 +197,22 @@ export function MinhasVagas() {
 
   useEffect(() => {
     listarHabilidades()
-      .then((lista) => setHabilidadesDisponiveis(lista.map((h: any) => ({ id: h.id_habilidade, nome: h.habilidade_nome }))))
-      .catch(() => setHabilidadesDisponiveis(SKILLS_FALLBACK.map((nome, i) => ({ id: -(i + 1), nome }))))
+      .then((lista) =>
+        setHabilidadesDisponiveis(
+          lista.map((h: any) => ({
+            id: h.id_habilidade,
+            nome: h.habilidade_nome,
+          })),
+        ),
+      )
+      .catch(() =>
+        setHabilidadesDisponiveis(
+          SKILLS_FALLBACK.map((nome, i) => ({
+            id: -(i + 1),
+            nome,
+          })),
+        ),
+      )
   }, [])
 
   useEffect(() => {
@@ -179,7 +225,11 @@ export function MinhasVagas() {
         const vagasMapeadas = vagasApi.map(mapVagaDaApi)
 
         const contagens = await Promise.all(
-          vagasMapeadas.map((v) => listarCandidatosPorVaga(Number(v.id)).then((c) => c.length).catch(() => 0))
+          vagasMapeadas.map((v) =>
+            listarCandidatosPorVaga(Number(v.id))
+              .then((c) => c.length)
+              .catch(() => 0),
+          ),
         )
 
         setVagas(vagasMapeadas.map((v, index) => ({ ...v, matches: contagens[index] })))
@@ -195,21 +245,22 @@ export function MinhasVagas() {
   }, [])
 
   function set<K extends keyof FormData>(key: K, value: FormData[K]) {
-    setForm(prev => ({ ...prev, [key]: value }))
-    setErrors(prev => ({ ...prev, [key]: undefined }))
+    setForm((prev) => ({ ...prev, [key]: value }))
+    setErrors((prev) => ({ ...prev, [key]: undefined }))
   }
 
   function toggleHabilidade(skill: string) {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       habilidades: prev.habilidades.includes(skill)
-        ? prev.habilidades.filter(s => s !== skill)
+        ? prev.habilidades.filter((s) => s !== skill)
         : [...prev.habilidades, skill],
     }))
   }
 
   async function handlePublicar() {
     const errs = validate(form)
+
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       setAlert({ type: 'error', message: 'Corrija os erros antes de publicar.' })
@@ -218,6 +269,7 @@ export function MinhasVagas() {
     }
 
     const session = getSession()
+
     if (!session) {
       setAlert({ type: 'error', message: 'Você precisa estar logado como empresa para publicar.' })
       return
@@ -248,14 +300,18 @@ export function MinhasVagas() {
       })
 
       const idVaga = vagaCriada.id_vaga
+
       if (form.habilidades.length > 0) {
         await Promise.allSettled(
           form.habilidades.map((nome) => {
             const habilidade = habilidadesDisponiveis.find((h) => h.nome === nome)
+
             if (habilidade && habilidade.id > 0) {
               return adicionarHabilidadeVaga(idVaga, habilidade.id)
             }
-          })
+
+            return undefined
+          }),
         )
       }
 
@@ -263,7 +319,7 @@ export function MinhasVagas() {
         .then((lista) => lista.find((v: any) => v.id_vaga === idVaga))
         .catch(() => vagaCriada)
 
-      setVagas(prev => [mapVagaDaApi(vagaComHabilidades ?? vagaCriada), ...prev])
+      setVagas((prev) => [mapVagaDaApi(vagaComHabilidades ?? vagaCriada), ...prev])
       setForm(emptyForm)
       setErrors({})
       setShowModal(false)
@@ -306,6 +362,7 @@ export function MinhasVagas() {
 
   async function handleSalvarEdicao() {
     const errs = validate(form)
+
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       setAlert({ type: 'error', message: 'Corrija os erros antes de salvar.' })
@@ -314,6 +371,7 @@ export function MinhasVagas() {
     }
 
     if (!vagaEditando) return
+
     setPublicando(true)
 
     try {
@@ -336,11 +394,18 @@ export function MinhasVagas() {
         vaga_prazo_candidatura: form.prazoCandidatura || null,
       })
 
-      setVagas(prev => prev.map(v =>
-        v.id === vagaEditando.id
-          ? { ...v, ...form, habilidades: form.habilidades }
-          : v
-      ))
+      setVagas((prev) =>
+        prev.map((v) =>
+          v.id === vagaEditando.id
+            ? {
+                ...v,
+                ...form,
+                habilidades: form.habilidades,
+              }
+            : v,
+        ),
+      )
+
       setShowModal(false)
       setVagaEditando(null)
       setForm(emptyForm)
@@ -358,12 +423,16 @@ export function MinhasVagas() {
   }
 
   async function handleExcluir(id: string) {
-    setVagas(prev =>
-      prev.map(v =>
+    setVagas((prev) =>
+      prev.map((v) =>
         v.id === id
-          ? { ...v, status: 'Inativa', dataAtualizacao: new Date().toISOString() }
-          : v
-      )
+          ? {
+              ...v,
+              status: 'Inativa',
+              dataAtualizacao: new Date().toISOString(),
+            }
+          : v,
+      ),
     )
 
     try {
@@ -371,7 +440,10 @@ export function MinhasVagas() {
     } catch (error) {
       setAlert({
         type: 'error',
-        message: error instanceof ApiError ? error.message : 'Não foi possível encerrar a vaga no servidor.',
+        message:
+          error instanceof ApiError
+            ? error.message
+            : 'Não foi possível encerrar a vaga no servidor.',
       })
       setTimeout(() => setAlert(null), 4000)
     }
@@ -384,7 +456,7 @@ export function MinhasVagas() {
     setErrors({})
   }
 
-  const vagasAtivas = vagas.filter(v => v.status === 'Ativa')
+  const vagasAtivas = vagas.filter((v) => v.status === 'Ativa')
 
   return (
     <div className="relative">
@@ -396,6 +468,7 @@ export function MinhasVagas() {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[var(--color-text)]">Minhas vagas</h1>
+
         <button
           onClick={() => setShowModal(true)}
           className="bg-[var(--color-text)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
@@ -408,26 +481,40 @@ export function MinhasVagas() {
         <p className="text-[var(--color-text-muted)] text-sm">Nenhuma vaga criada ainda.</p>
       ) : (
         <div className="flex flex-col gap-4">
-          {vagasAtivas.map(vaga => (
-            <div key={vaga.id} className="bg-white border border-[var(--color-border)] rounded-xl p-5">
+          {vagasAtivas.map((vaga) => (
+            <div
+              key={vaga.id}
+              className="bg-white border border-[var(--color-border)] rounded-xl p-5"
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="font-semibold text-[var(--color-text)]">{vaga.titulo}</h2>
+
                     <span className="text-xs bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] px-2 py-0.5 rounded-full font-medium">
                       {vaga.status}
                     </span>
                   </div>
+
                   <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
-                    {[vaga.area, vaga.modelo, vaga.tipoContrato, vaga.nivel].filter(Boolean).join(' • ')}
+                    {[vaga.area, vaga.modelo, vaga.tipoContrato, vaga.nivel]
+                      .filter(Boolean)
+                      .join(' • ')}
                   </p>
+
                   {vaga.localidade && (
-                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">📍 {vaga.localidade}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      📍 {vaga.localidade}
+                    </p>
                   )}
+
                   {vaga.descricao && (
-                    <p className="text-sm text-[var(--color-text)] mt-2 line-clamp-2 break-all">{vaga.descricao}</p>
+                    <p className="text-sm text-[var(--color-text)] mt-2 line-clamp-2 break-all">
+                      {vaga.descricao}
+                    </p>
                   )}
                 </div>
+
                 <div className="flex gap-3 ml-4 shrink-0">
                   <button
                     onClick={() => handleEditar(vaga)}
@@ -435,6 +522,7 @@ export function MinhasVagas() {
                   >
                     Editar
                   </button>
+
                   <button
                     onClick={() => handleExcluir(vaga.id)}
                     className="text-[var(--color-error)] text-sm font-medium hover:opacity-80 transition-opacity"
@@ -447,7 +535,10 @@ export function MinhasVagas() {
               {vaga.habilidades.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {vaga.habilidades.map((h) => (
-                    <span key={h} className="text-xs bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] px-2 py-0.5 rounded-full">
+                    <span
+                      key={h}
+                      className="text-xs bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] px-2 py-0.5 rounded-full"
+                    >
                       {h}
                     </span>
                   ))}
@@ -458,7 +549,10 @@ export function MinhasVagas() {
                 <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1">
                   🤝 Quem deu match ({vaga.matches})
                 </p>
-                <p className="text-sm text-[var(--color-text-muted)]">Nenhum estagiário curtiu ainda.</p>
+
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  Nenhum estagiário curtiu ainda.
+                </p>
               </div>
             </div>
           ))}
@@ -468,202 +562,230 @@ export function MinhasVagas() {
       {showModal && (
         <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 overflow-y-auto pt-24 pb-10">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl mx-4 px-8 pb-8 pt-10">
-            <h2 className="text-xl font-bold text-[var(--color-text)] mb-6">{vagaEditando ? 'Editar vaga' : 'Nova vaga'}</h2>
+            <h2 className="text-xl font-bold text-[var(--color-text)] mb-6">
+              {vagaEditando ? 'Editar vaga' : 'Nova vaga'}
+            </h2>
 
             <div className="flex flex-col gap-5">
-
-              {/* Título */}
-              <Field label="Título *" error={errors.titulo} hint={`${form.titulo.length}/100`}>
+              <Field
+                label={<RequiredLabel>Título</RequiredLabel>}
+                error={errors.titulo}
+                hint={`${form.titulo.length}/100`}
+              >
                 <input
                   type="text"
                   maxLength={100}
                   value={form.titulo}
-                  onChange={e => set('titulo', e.target.value)}
+                  onChange={(e) => set('titulo', e.target.value)}
                   className={inputClass}
                   placeholder="Ex.: Desenvolvedor Front-end"
                 />
               </Field>
 
-              {/* Descrição */}
-              <Field label="Descrição *" error={errors.descricao} hint={`${form.descricao.length}/2000`}>
+              <Field
+                label={<RequiredLabel>Descrição</RequiredLabel>}
+                error={errors.descricao}
+                hint={`${form.descricao.length}/2000`}
+              >
                 <textarea
                   value={form.descricao}
-                  onChange={e => set('descricao', e.target.value)}
+                  onChange={(e) => set('descricao', e.target.value)}
                   rows={6}
                   className={inputClass}
                   placeholder="Descreva as responsabilidades, requisitos e diferenciais da vaga..."
                 />
               </Field>
 
-              {/* Área + Localidade */}
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Área *" error={errors.area}>
+                <Field label={<RequiredLabel>Área</RequiredLabel>} error={errors.area}>
                   <input
                     type="text"
                     value={form.area}
-                    onChange={e => set('area', e.target.value)}
+                    onChange={(e) => set('area', e.target.value)}
                     className={inputClass}
                     placeholder="Ex.: TI, Comercial"
                   />
                 </Field>
-                <Field label="Localidade *" error={errors.localidade}>
+
+                <Field label={<RequiredLabel>Localidade</RequiredLabel>} error={errors.localidade}>
                   <input
                     type="text"
                     value={form.localidade}
-                    onChange={e => set('localidade', e.target.value)}
+                    onChange={(e) => set('localidade', e.target.value)}
                     className={inputClass}
                     placeholder="Ex.: São Paulo/SP"
                   />
                 </Field>
               </div>
 
-              {/* Modelo de trabalho */}
-              <Field label="Modelo de trabalho *">
+              <Field label={<RequiredLabel>Modelo de trabalho</RequiredLabel>}>
                 <div className="flex gap-3">
-                  {WORK_MODELS.map(m => (
-                    <RadioPill key={m} label={m} checked={form.modelo === m} onChange={() => set('modelo', m)} />
+                  {WORK_MODELS.map((m) => (
+                    <RadioPill
+                      key={m}
+                      label={m}
+                      checked={form.modelo === m}
+                      onChange={() => set('modelo', m)}
+                    />
                   ))}
                 </div>
               </Field>
 
-              {/* Tipo de contrato */}
-              <Field label="Tipo de contrato *">
+              <Field label={<RequiredLabel>Tipo de contrato</RequiredLabel>}>
                 <div className="flex gap-3 flex-wrap">
-                  {CONTRACT_TYPES.map(t => (
-                    <RadioPill key={t} label={t} checked={form.tipoContrato === t} onChange={() => set('tipoContrato', t)} />
+                  {CONTRACT_TYPES.map((t) => (
+                    <RadioPill
+                      key={t}
+                      label={t}
+                      checked={form.tipoContrato === t}
+                      onChange={() => set('tipoContrato', t)}
+                    />
                   ))}
                 </div>
               </Field>
 
-              {/* Nível */}
-              <Field label="Nível da vaga *">
+              <Field label={<RequiredLabel>Nível da vaga</RequiredLabel>}>
                 <div className="flex gap-3">
-                  {LEVELS.map(l => (
-                    <RadioPill key={l} label={l} checked={form.nivel === l} onChange={() => set('nivel', l)} />
+                  {LEVELS.map((l) => (
+                    <RadioPill
+                      key={l}
+                      label={l}
+                      checked={form.nivel === l}
+                      onChange={() => set('nivel', l)}
+                    />
                   ))}
                 </div>
               </Field>
 
-              {/* Quantidade de vagas */}
-              <Field label="Quantidade de vagas *" error={errors.quantidadeVagas}>
+              <Field
+                label={<RequiredLabel>Quantidade de vagas</RequiredLabel>}
+                error={errors.quantidadeVagas}
+              >
                 <input
                   type="number"
                   min={1}
                   value={form.quantidadeVagas}
-                  onChange={e => set('quantidadeVagas', e.target.value)}
+                  onChange={(e) => set('quantidadeVagas', e.target.value)}
                   className={inputClass}
                   placeholder="Ex.: 2"
                 />
               </Field>
 
-              {/* Faixa salarial */}
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Salário mín (R$)" error={errors.salarioMin}>
                   <input
                     type="number"
                     min={0}
                     value={form.salarioMin}
-                    onChange={e => set('salarioMin', e.target.value)}
+                    onChange={(e) => set('salarioMin', e.target.value)}
                     className={inputClass}
                     placeholder="Opcional"
                   />
                 </Field>
+
                 <Field label="Salário máx (R$)">
                   <input
                     type="number"
                     min={0}
                     value={form.salarioMax}
-                    onChange={e => set('salarioMax', e.target.value)}
+                    onChange={(e) => set('salarioMax', e.target.value)}
                     className={inputClass}
                     placeholder="Opcional"
                   />
                 </Field>
               </div>
 
-              {/* Prazo da candidatura */}
               <Field label="Prazo da candidatura">
                 <input
                   type="date"
                   value={form.prazoCandidatura}
-                  onChange={e => set('prazoCandidatura', e.target.value)}
+                  onChange={(e) => set('prazoCandidatura', e.target.value)}
                   className={inputClass}
                 />
               </Field>
 
-              {/* Benefícios */}
               <Field label="Benefícios">
                 <textarea
                   value={form.beneficios}
-                  onChange={e => set('beneficios', e.target.value)}
+                  onChange={(e) => set('beneficios', e.target.value)}
                   rows={3}
                   className={inputClass}
                   placeholder="Ex.: VR, VA, plano de saúde..."
                 />
               </Field>
 
-              {/* Carga horária + Horário */}
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Carga horária semanal">
                   <input
                     type="text"
                     value={form.cargaHoraria}
-                    onChange={e => set('cargaHoraria', e.target.value)}
+                    onChange={(e) => set('cargaHoraria', e.target.value)}
                     className={inputClass}
                     placeholder="Ex.: 40h"
                   />
                 </Field>
+
                 <Field label="Horário de trabalho">
                   <input
                     type="text"
                     value={form.horarioTrabalho}
-                    onChange={e => set('horarioTrabalho', e.target.value)}
+                    onChange={(e) => set('horarioTrabalho', e.target.value)}
                     className={inputClass}
                     placeholder="Ex.: seg-sex, 9h às 18h"
                   />
                 </Field>
               </div>
 
-              {/* Escolaridade + Experiência */}
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Escolaridade mínima">
                   <select
                     value={form.escolaridade}
-                    onChange={e => set('escolaridade', e.target.value)}
+                    onChange={(e) => set('escolaridade', e.target.value)}
                     className={inputClass}
                   >
                     <option value="">Selecione</option>
-                    {EDUCATION_LEVELS.map(e => <option key={e}>{e}</option>)}
+                    {EDUCATION_LEVELS.map((e) => (
+                      <option key={e}>{e}</option>
+                    ))}
                   </select>
                 </Field>
+
                 <Field label="Experiência mínima">
                   <input
                     type="text"
                     value={form.experienciaMinima}
-                    onChange={e => set('experienciaMinima', e.target.value)}
+                    onChange={(e) => set('experienciaMinima', e.target.value)}
                     className={inputClass}
                     placeholder="Ex.: 1 ano"
                   />
                 </Field>
               </div>
 
-              {/* PCD */}
-              <Field label="PCD *">
+              <Field label={<RequiredLabel>PCD</RequiredLabel>}>
                 <div className="flex gap-3">
-                  {['Sim', 'Não'].map(op => (
-                    <RadioPill key={op} label={op} checked={form.pcd === op} onChange={() => set('pcd', op)} />
+                  {['Sim', 'Não'].map((op) => (
+                    <RadioPill
+                      key={op}
+                      label={op}
+                      checked={form.pcd === op}
+                      onChange={() => set('pcd', op)}
+                    />
                   ))}
                 </div>
               </Field>
 
-              {/* Habilidades */}
               <div>
-                <p className="text-sm font-medium text-[var(--color-text)] mb-3">Habilidades</p>
+                <p className="text-sm font-medium text-[var(--color-text)] mb-3">
+                  Habilidades
+                </p>
+
                 <div className="flex flex-wrap gap-2">
                   {(habilidadesDisponiveis.length > 0
                     ? habilidadesDisponiveis
                     : SKILLS_FALLBACK.map((nome, i) => ({ id: -(i + 1), nome }))
                   ).map(({ nome }) => {
                     const selected = form.habilidades.includes(nome)
+
                     return (
                       <button
                         key={nome}
@@ -690,6 +812,7 @@ export function MinhasVagas() {
               >
                 Cancelar
               </button>
+
               <button
                 onClick={vagaEditando ? handleSalvarEdicao : handlePublicar}
                 disabled={publicando}
@@ -705,7 +828,16 @@ export function MinhasVagas() {
   )
 }
 
-const inputClass = 'w-full border border-[var(--color-border)] rounded-lg px-3 py-2.5 text-sm text-[var(--color-text)] bg-white focus:outline-none focus:border-[var(--color-primary)] transition-colors'
+const inputClass =
+  'w-full border border-[var(--color-border)] rounded-lg px-3 py-2.5 text-sm text-[var(--color-text)] bg-white focus:outline-none focus:border-[var(--color-primary)] transition-colors'
+
+function RequiredLabel({ children }: { children: ReactNode }) {
+  return (
+    <span>
+      {children} <span className="text-red-500">*</span>
+    </span>
+  )
+}
 
 function Field({
   label,
@@ -713,24 +845,37 @@ function Field({
   hint,
   children,
 }: {
-  label: string
+  label: ReactNode
   error?: string
   hint?: string
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-[var(--color-text)]">{label}</label>
+        <label className="text-sm font-medium text-[var(--color-text)]">
+          {label}
+        </label>
+
         {hint && <span className="text-xs text-[var(--color-text-muted)]">{hint}</span>}
       </div>
+
       {children}
+
       {error && <p className="text-xs text-[var(--color-error)]">{error}</p>}
     </div>
   )
 }
 
-function RadioPill({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+function RadioPill({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: () => void
+}) {
   return (
     <button
       type="button"
