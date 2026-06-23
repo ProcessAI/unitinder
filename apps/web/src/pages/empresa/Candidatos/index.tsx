@@ -21,10 +21,17 @@ interface Candidato {
 function mapStatusDaApi(status: string): CandidatoStatus {
   if (status === 'ACEITO') return 'aprovado'
   if (status === 'RECUSADO') return 'recusado'
+  if (status === 'EM_ANALISE') return 'em_analise'
   return 'novo'
 }
 
 function mapCandidatoDaApi(m: any, vaga: { id_vaga: number; vaga_titulo: string }): Candidato {
+  const habilidades = Array.isArray(m.estagiario?.habilidades)
+    ? m.estagiario.habilidades
+        .map((item: any) => item.habilidade?.habilidade_nome)
+        .filter(Boolean)
+    : []
+
   return {
     id: String(m.id_match),
     nome: m.estagiario?.estagiario_nome_completo ?? 'Candidato',
@@ -34,8 +41,8 @@ function mapCandidatoDaApi(m: any, vaga: { id_vaga: number; vaga_titulo: string 
     jobTitle: vaga.vaga_titulo,
     jobId: String(vaga.id_vaga),
     status: mapStatusDaApi(m.match_status),
-    proficiencia: 'intermediario',
-    habilidades: [],
+    proficiencia: m.estagiario?.estagiario_nivel_experiencia ?? 'intermediario',
+    habilidades,
     contactEmail: m.estagiario?.estagiario_email,
   }
 }
@@ -133,7 +140,9 @@ export function Candidatos() {
     }
 
     try {
-      await api.atualizarStatusMatch(Number(id), novoStatus === 'aprovado' ? 'aceito' : 'recusado')
+      if (novoStatus !== 'em_analise') {
+        await api.atualizarStatusMatch(Number(id), novoStatus === 'aprovado' ? 'aceito' : 'recusado')
+      }
 
       setCandidatos((prev) =>
         prev.map((c) => (c.id === id ? { ...c, status: novoStatus } : c))
@@ -305,6 +314,14 @@ function CandidatoItem({ candidato, contatoVisivel, onToggleContato, onAlterarSt
             >
               Recusar
             </button>
+            {candidato.status !== 'em_analise' && (
+              <button
+                onClick={() => onAlterarStatus(candidato.id, 'em_analise')}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium border border-yellow-200 text-yellow-700 hover:bg-yellow-50 transition duration-150"
+              >
+                Analisar
+              </button>
+            )}
             <button
               onClick={() => onAlterarStatus(candidato.id, 'aprovado')}
               className="px-3 py-1.5 rounded-lg text-sm font-medium bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] transition duration-150"

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, ChangeEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { registroUsuario } from '@/services/AuthService'
 import { listarHabilidades, type Habilidade } from '@/services/HabilidadesService'
 import { saveSession } from '@/services/utils/http'
@@ -217,10 +218,10 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 
 // ── Componente principal ──────────────────────────────────────────────────
 export function CadastroEstagiario() {
+  const navigate = useNavigate()
   const [form, setForm] = useState<FormData>(INICIAL)
   const [erros, setErros] = useState<FormErrors>({})
   const [enviando, setEnviando] = useState(false)
-  const [sucesso, setSucesso] = useState(false)
   const [catalogoHabilidades, setCatalogoHabilidades] = useState<Habilidade[]>([])
   const [habilidadeSelecionada, setHabilidadeSelecionada] = useState('')
 
@@ -291,7 +292,7 @@ export function CadastroEstagiario() {
       })
 
       saveSession({ token: resposta.token, role: resposta.role, id: resposta.estagiario.id })
-      setSucesso(true)
+      navigate('/usuario', { replace: true })
     } catch (err: any) {
       alert(err?.message ?? 'Erro ao criar perfil. Tente novamente.')
     } finally {
@@ -303,14 +304,7 @@ export function CadastroEstagiario() {
     <>
       <style>{css}</style>
 
-      {sucesso ? (
-        <div className="cad-inner sucesso">
-          <div className="sucesso-emoji">🎉</div>
-          <h1 className="cad-title">Perfil criado com sucesso!</h1>
-          <p style={{ color: '#5f8aa0', marginTop: 8, textAlign: 'center' }}>Bem-vindo ao UniTinder.</p>
-        </div>
-      ) : (
-        <main className="cad-inner">
+      <main className="cad-inner">
           <h1 className="cad-title">Cadastro de estagiário</h1>
 
           {/* CONTA */}
@@ -532,8 +526,7 @@ export function CadastroEstagiario() {
               {enviando ? 'Salvando...' : 'Criar perfil'}
             </button>
           </div>
-        </main>
-      )}
+      </main>
     </>
   )
 }

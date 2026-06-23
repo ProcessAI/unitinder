@@ -31,6 +31,11 @@ export function Login() {
       return
     }
 
+    if (!isEmpresa && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identificador.trim())) {
+      setErro('Informe um e-mail valido. Exemplo: lucas@gmail.com.')
+      return
+    }
+
     setCarregando(true)
 
     try {
@@ -49,46 +54,45 @@ export function Login() {
 
       navigate('/usuario')
     } catch (error) {
-      setErro(error instanceof ApiError ? error.message : 'Não foi possível entrar. Tente novamente.')
+      setErro(error instanceof ApiError ? error.message : 'Nao foi possivel entrar. Tente novamente.')
     } finally {
       setCarregando(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#F1F5F7]">
-<header className="flex h-14 items-center gap-4 bg-white px-10 shadow-sm">
-  <button
-    type="button"
-    onClick={() => navigate('/')}
-    className="flex items-center gap-1 text-sm font-medium text-[#1F4068] hover:underline"
-  >
-    ← Voltar
-  </button>
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-white shadow-[var(--shadow-sm)]">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex items-center"
+            aria-label="Voltar para selecao de perfil"
+          >
+            <img
+              src={logo}
+              alt="UniTinder"
+              className="h-20 w-20 object-contain"
+            />
+          </button>
 
-  <img
-    src={logo}
-    alt="UniTinder"
-    className="h-8"
-  />
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="rounded-lg bg-[var(--color-primary-light)] px-4 py-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors duration-150 hover:bg-[#c8eeea]"
+          >
+            Voltar
+          </button>
+        </nav>
+      </header>
 
-  <span className="ml-auto text-sm font-medium text-[#1F4068]">
-    Entrar
-  </span>
-</header>
-
-      <main className="flex flex-col items-center pt-10">
-        <img
-          src={logo}
-          alt="UniTinder"
-          className="mb-4 w-64"
-        />
-
-        <h1 className="mb-4 text-3xl font-bold text-[#1F4068]">
+      <main className="mx-auto flex w-full max-w-6xl flex-col items-center px-8 pt-20">
+        <h1 className="mb-6 text-3xl font-bold text-[var(--color-text)]">
           Entrar
         </h1>
 
-        <div className="w-[420px] rounded-lg border border-gray-200 bg-white p-6">
+        <div className="w-full max-w-[420px] rounded-lg border border-[var(--color-border)] bg-white p-6 shadow-[var(--shadow-sm)]">
           {erro && (
             <div className="mb-4">
               <Alert type="error" message={erro} onClose={() => setErro(null)} />
@@ -96,7 +100,7 @@ export function Login() {
           )}
 
           <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-[#1F4068]">
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">
               {isEmpresa ? 'CNPJ' : 'E-mail'}
             </label>
 
@@ -108,12 +112,12 @@ export function Login() {
               onChange={(event) =>
                 setIdentificador(isEmpresa ? formatarCnpj(event.target.value) : event.target.value)
               }
-              className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
+              className="w-full rounded border border-[var(--color-border)] p-2 outline-none focus:border-[var(--color-primary)]"
             />
           </div>
 
           <div className="mb-5">
-            <label className="mb-1 block text-sm font-medium text-[#1F4068]">
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">
               Senha
             </label>
 
@@ -121,7 +125,7 @@ export function Login() {
               type="password"
               value={senha}
               onChange={(event) => setSenha(event.target.value)}
-              className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
+              className="w-full rounded border border-[var(--color-border)] p-2 outline-none focus:border-[var(--color-primary)]"
             />
           </div>
 
@@ -129,17 +133,17 @@ export function Login() {
             type="button"
             onClick={handleLogin}
             disabled={carregando}
-            className="w-full rounded bg-[#1F4068] py-2 text-white transition hover:bg-[#173553] disabled:opacity-60"
+            className="w-full rounded-lg bg-[var(--color-text)] py-2 text-white transition hover:bg-[#2c2c46] disabled:opacity-60"
           >
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <p className="mt-4 text-center text-sm text-gray-500">
+          <p className="mt-4 text-center text-sm text-[var(--color-text-muted)]">
             Não tem conta?{' '}
             <button
               type="button"
               onClick={() => navigate(isEmpresa ? '/empresa/cadastro' : '/usuario/cadastro')}
-              className="font-medium text-[#1F4068] hover:underline"
+              className="font-medium text-[var(--color-primary)] hover:underline"
             >
               Cadastre-se
             </button>

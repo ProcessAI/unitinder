@@ -15,6 +15,6 @@ export function listarCandidatosPorVaga(idVaga: number) {
   return request<any[]>(`/matches/vaga/${idVaga}`)
 }
 
-export function atualizarStatusMatch(idMatch: number, status: 'aceito' | 'recusado') {
+export function atualizarStatusMatch(idMatch: number, status: 'aceito' | 'em_analise' | 'recusado') {
   return request<any>(`/matches/${idMatch}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
 }
