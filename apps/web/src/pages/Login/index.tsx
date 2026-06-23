@@ -87,12 +87,18 @@ export function Login() {
         </nav>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-col items-center px-8 pt-20">
-        <h1 className="mb-6 text-3xl font-bold text-[var(--color-text)]">
+      <main className="flex flex-col items-center pt-10">
+        <img
+        src={logo}
+        alt="Unitinder"
+        className='mb-4 w-64'
+        />
+
+        <h1 className="mb-4 text-3xl font-bold text-[#1F4068]">
           Entrar
         </h1>
 
-        <div className="w-full max-w-[420px] rounded-lg border border-[var(--color-border)] bg-white p-6 shadow-[var(--shadow-sm)]">
+        <div className="w-[420px] rounded-lg border border-gray-200 bg-white p-6">
           {erro && (
             <div className="mb-4">
               <Alert type="error" message={erro} onClose={() => setErro(null)} />
@@ -112,7 +118,7 @@ export function Login() {
               onChange={(event) =>
                 setIdentificador(isEmpresa ? formatarCnpj(event.target.value) : event.target.value)
               }
-              className="w-full rounded border border-[var(--color-border)] p-2 outline-none focus:border-[var(--color-primary)]"
+              className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
             />
           </div>
 
@@ -125,7 +131,7 @@ export function Login() {
               type="password"
               value={senha}
               onChange={(event) => setSenha(event.target.value)}
-              className="w-full rounded border border-[var(--color-border)] p-2 outline-none focus:border-[var(--color-primary)]"
+              className="w-full rounded border border-gray-200 p-2 outline-none focus:border-[#1F4068]"
             />
           </div>
 
@@ -133,12 +139,12 @@ export function Login() {
             type="button"
             onClick={handleLogin}
             disabled={carregando}
-            className="w-full rounded-lg bg-[var(--color-text)] py-2 text-white transition hover:bg-[#2c2c46] disabled:opacity-60"
+            className="w-full rounded-lg bg-[#1F4068] py-2 text-white transition hover:bg-[#173553] disabled:opacity-60"
           >
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <p className="mt-4 text-center text-sm text-[var(--color-text-muted)]">
+          <p className="mt-4 text-center text-sm text-500">
             Não tem conta?{' '}
             <button
               type="button"
