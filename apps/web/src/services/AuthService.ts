@@ -49,6 +49,7 @@ export interface RegistroUsuarioPayload {
   linkedin_url?: string
   portfolio_url?: string
   bio?: string
+  habilidades?: string[]
 }
 
 export function registroUsuario(dados: RegistroUsuarioPayload) {
