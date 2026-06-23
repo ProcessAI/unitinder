@@ -190,7 +190,7 @@ export function CadastroEmpresa() {
       >
         <div className="flex flex-col gap-1">
           <label htmlFor="nomeEmpresa" className="text-sm font-medium text-[var(--color-text)]">
-            Nome da empresa
+            Nome da empresa<span className="text-red-500">*</span>
           </label>
 
           <input
@@ -206,7 +206,7 @@ export function CadastroEmpresa() {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="cnpj" className="text-sm font-medium text-[var(--color-text)]">
-            CNPJ
+            CNPJ<span className="text-red-500">*</span>
           </label>
 
           <input
@@ -223,7 +223,7 @@ export function CadastroEmpresa() {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="email" className="text-sm font-medium text-[var(--color-text)]">
-            E-mail corporativo
+            E-mail corporativo<span className="text-red-500">*</span>
           </label>
 
           <input
@@ -240,7 +240,7 @@ export function CadastroEmpresa() {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="telefone" className="text-sm font-medium text-[var(--color-text)]">
-            Telefone
+            Telefone<span className="text-red-500">*</span>
           </label>
 
           <input
@@ -257,7 +257,7 @@ export function CadastroEmpresa() {
 
         <div className="flex flex-col gap-2 md:col-span-2">
           <label htmlFor="areaAtuacao" className="text-sm font-medium text-[var(--color-text)]">
-            Área de atuação
+            Área de atuação<span className="text-red-500">*</span>
           </label>
 
           <select
@@ -277,7 +277,7 @@ export function CadastroEmpresa() {
 
         <div className="flex flex-col gap-2 md:col-span-2">
           <label htmlFor="descricao" className="text-sm font-medium text-[var(--color-text)]">
-            Descrição da empresa
+            Descrição da empresa<span className="text-red-500">*</span>
           </label>
 
           <textarea
@@ -294,7 +294,7 @@ export function CadastroEmpresa() {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="senha" className="text-sm font-medium text-[var(--color-text)]">
-            Senha
+            Senha<span className="text-red-500">*</span>
           </label>
 
           <div className="relative">
@@ -321,7 +321,7 @@ export function CadastroEmpresa() {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="confirmarSenha" className="text-sm font-medium text-[var(--color-text)]">
-            Confirmar senha
+            Confirmar senha<span className="text-red-500">*</span>
           </label>
 
           <div className="relative">
