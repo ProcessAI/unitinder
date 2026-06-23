@@ -8,7 +8,9 @@ export const VagaController = {
 
       const vagas = await prisma.vaga.findMany({
         where: id_empresa ? { id_empresa_empresa: id_empresa } : undefined,
-        include: { habilidades: { include: { habilidade: true } } },
+        include: { habilidades: { include: { habilidade: true } },
+        empresa: true,
+        },
         orderBy: { vaga_created_at: 'desc' },
       })
 
