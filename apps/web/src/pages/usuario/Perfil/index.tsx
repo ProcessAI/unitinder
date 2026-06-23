@@ -5,10 +5,14 @@ import {
   buscarEstagiario,
   atualizarEstagiario,
   listarHabilidadesEstagiario,
+  adicionarHabilidadeEstagiario,
+  removerHabilidadeEstagiario,
   type Estagiario,
   type AtualizarEstagiarioPayload,
   type VinculoHabilidade,
+  type Habilidade,
 } from '@/services/EstagiarioService'
+import { listarHabilidades } from '@/services/HabilidadesService'
 
 // ── Constantes ────────────────────────────────────────────────────────────
 const ESTADOS = [
@@ -113,6 +117,11 @@ export function PerfilUsuario() {
   const [perfil, setPerfil] = useState<Estagiario | null>(null)
   const [form, setForm] = useState<Estagiario | null>(null)
   const [habilidades, setHabilidades] = useState<VinculoHabilidade[]>([])
+  const [catalogoHabilidades, setCatalogoHabilidades] = useState<Habilidade[]>([])
+  const [habilidadeSelecionada, setHabilidadeSelecionada] = useState('')
+  const [salvandoHabilidade, setSalvandoHabilidade] = useState(false)
+  const [removendoHabilidadeId, setRemovendoHabilidadeId] = useState<number | null>(null)
+  const [erroHabilidade, setErroHabilidade] = useState<string | null>(null)
   const [erros, setErros] = useState<FormErrors>({})
 
   const [carregando, setCarregando] = useState(true)
@@ -133,17 +142,51 @@ export function PerfilUsuario() {
     Promise.all([
       buscarEstagiario(session.id),
       listarHabilidadesEstagiario(session.id),
+      listarHabilidades(),
     ])
-      .then(([estagiario, vinculos]) => {
+      .then(([estagiario, vinculos, catalogo]) => {
         setPerfil(estagiario)
         setForm(estagiario)
         setHabilidades(vinculos)
+        setCatalogoHabilidades(catalogo)
       })
       .catch(() => setErroCarregamento('Não foi possível carregar o perfil.'))
       .finally(() => setCarregando(false))
   }, [session?.id])
 
-  // ── Handlers ──────────────────────────────────────────────────────────
+  // ── Habilidades: adicionar / remover vínculo ─────────────────────────────
+  async function handleAdicionarHabilidade() {
+    if (!session?.id || !habilidadeSelecionada) return
+
+    setSalvandoHabilidade(true)
+    setErroHabilidade(null)
+    try {
+      const resposta = await adicionarHabilidadeEstagiario(session.id, Number(habilidadeSelecionada))
+      setHabilidades(prev => [...prev, resposta.vinculo])
+      setHabilidadeSelecionada('')
+    } catch {
+      setErroHabilidade('Não foi possível adicionar a habilidade. Tente novamente.')
+    } finally {
+      setSalvandoHabilidade(false)
+    }
+  }
+
+  async function handleRemoverHabilidade(idHabilidade: number) {
+    if (!session?.id) return
+
+    setRemovendoHabilidadeId(idHabilidade)
+    setErroHabilidade(null)
+    try {
+      await removerHabilidadeEstagiario(session.id, idHabilidade)
+      setHabilidades(prev => prev.filter(v => v.id_habilidade !== idHabilidade))
+    } catch {
+      setErroHabilidade('Não foi possível remover a habilidade. Tente novamente.')
+    } finally {
+      setRemovendoHabilidadeId(null)
+    }
+  }
+
+
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
@@ -478,6 +521,12 @@ export function PerfilUsuario() {
 
       {/* ── Habilidades ── */}
       <Secao titulo="Habilidades">
+        {erroHabilidade && (
+          <div className="mb-3">
+            <Alert type="error" message={erroHabilidade} onClose={() => setErroHabilidade(null)} />
+          </div>
+        )}
+
         {habilidades.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">Nenhuma habilidade vinculada ainda.</p>
         ) : (
@@ -495,13 +544,52 @@ export function PerfilUsuario() {
                 {v.habilidade.habilidade_nivel && (
                   <span className="opacity-60 text-[10px]">· {HABILIDADE_NIVEL_LABEL[v.habilidade.habilidade_nivel]}</span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => handleRemoverHabilidade(v.id_habilidade)}
+                  disabled={removendoHabilidadeId === v.id_habilidade}
+                  aria-label={`Remover ${v.habilidade.habilidade_nome}`}
+                  className="opacity-60 hover:opacity-100 disabled:opacity-30 transition-opacity"
+                >
+                  {removendoHabilidadeId === v.id_habilidade ? '…' : '×'}
+                </button>
               </span>
             ))}
           </div>
         )}
-        <p className="text-xs text-[var(--color-text-muted)] mt-3">
-          Para adicionar ou remover habilidades, use a tela de habilidades do seu perfil.
-        </p>
+
+        <div className="flex flex-col sm:flex-row gap-2 mt-4">
+          <select
+            value={habilidadeSelecionada}
+            onChange={e => setHabilidadeSelecionada(e.target.value)}
+            className={`${inputCls} sm:max-w-xs`}
+          >
+            <option value="">Selecione uma habilidade...</option>
+            {catalogoHabilidades
+              .filter(h => !habilidades.some(v => v.id_habilidade === h.id_habilidade))
+              .map(h => (
+                <option key={h.id_habilidade} value={h.id_habilidade}>
+                  {h.habilidade_nome}
+                  {h.habilidade_nivel ? ` · ${HABILIDADE_NIVEL_LABEL[h.habilidade_nivel]}` : ''}
+                </option>
+              ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAdicionarHabilidade}
+            disabled={!habilidadeSelecionada || salvandoHabilidade}
+            className="text-sm font-medium px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-[var(--radius-md)] hover:bg-[var(--color-primary-dark)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {salvandoHabilidade ? 'Adicionando...' : 'Adicionar habilidade'}
+          </button>
+        </div>
+
+        {catalogoHabilidades.length > 0 &&
+          catalogoHabilidades.every(h => habilidades.some(v => v.id_habilidade === h.id_habilidade)) && (
+            <p className="text-xs text-[var(--color-text-muted)] mt-2">
+              Todas as habilidades do catálogo já estão vinculadas ao seu perfil.
+            </p>
+        )}
       </Secao>
 
       {/* ── Preferências profissionais ── */}

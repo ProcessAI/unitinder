@@ -1,8 +1,29 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 
+async function recalcularPerfilCompleto(id_estagiario: number) {
+  const estagiario = await prisma.estagiario.findUnique({ where: { id_estagiario } })
+  if (!estagiario) return
+
+  const completo = Boolean(
+    estagiario.estagiario_telefone?.trim() &&
+    estagiario.estagiario_instituicao?.trim() &&
+    estagiario.estagiario_curso?.trim() &&
+    estagiario.estagiario_bio?.trim() &&
+    estagiario.estagiario_foto_perfil_url?.trim()
+  )
+
+  if (completo !== estagiario.estagiario_perfil_completo) {
+    await prisma.estagiario.update({
+      where: { id_estagiario },
+      data: { estagiario_perfil_completo: completo },
+    })
+  }
+
+  return completo
+}
+
 export const EstagiarioController = {
-  // ── GET /estagiarios ────────────────────────────────────────────────────
   listar: async (req: Request, res: Response) => {
     try {
       const estagiarios = await prisma.estagiario.findMany({
@@ -31,7 +52,6 @@ export const EstagiarioController = {
           estagiario_bio: true,
           estagiario_perfil_completo: true,
           estagiario_created_at: true,
-          // estagiario_senha_hash NUNCA exposto
         },
       })
 
@@ -42,7 +62,6 @@ export const EstagiarioController = {
     }
   },
 
-  // ── GET /estagiarios/:id ────────────────────────────────────────────────
   buscarPorId: async (req: Request, res: Response) => {
     try {
       const id = Number(req.params.id)
@@ -105,7 +124,6 @@ export const EstagiarioController = {
         return res.status(404).json({ error: 'Estagiário não encontrado.' })
       }
 
-      // Campos que nunca podem ser alterados via PUT de perfil
       const {
         estagiario_senha_hash,
         estagiario_cpf,
@@ -116,6 +134,22 @@ export const EstagiarioController = {
         ...dados
       } = req.body as Record<string, unknown>
 
+      const camposData = ['estagiario_previsao_formatura', 'estagiario_data_nascimento'] as const
+      for (const campo of camposData) {
+        if (dados[campo] !== undefined) {
+          const valor = dados[campo]
+          dados[campo] = valor ? new Date(valor as string) : null
+        }
+      }
+
+      const camposNumericos = ['estagiario_semestre_atual', 'estagiario_carga_horaria_preferida'] as const
+      for (const campo of camposNumericos) {
+        if (dados[campo] !== undefined) {
+          const valor = dados[campo]
+          dados[campo] = valor === '' || valor === null ? null : Number(valor)
+        }
+      }
+
       const estagiario = await prisma.estagiario.update({
         where: { id_estagiario: id },
         data: {
@@ -124,7 +158,10 @@ export const EstagiarioController = {
         },
       })
 
-      const { estagiario_senha_hash: _, ...estagiarioPublico } = estagiario
+      await recalcularPerfilCompleto(id)
+      const estagiarioFinal = await prisma.estagiario.findUnique({ where: { id_estagiario: id } })
+
+      const { estagiario_senha_hash: _, ...estagiarioPublico } = estagiarioFinal ?? estagiario
 
       return res.json({ message: 'Perfil atualizado com sucesso.', estagiario: estagiarioPublico })
     } catch (error) {
@@ -133,8 +170,6 @@ export const EstagiarioController = {
     }
   },
 
-  // ── DELETE /estagiarios/:id ─────────────────────────────────────────────
-  // Soft delete — desativa a conta (RN-04), não remove o registro.
   deletar: async (req: Request, res: Response) => {
     try {
       const id = Number(req.params.id)
@@ -160,9 +195,6 @@ export const EstagiarioController = {
     }
   },
 
-  // ── GET /estagiarios/:id/habilidades ───────────────────────────────────
-  // Lista as habilidades vinculadas ao estagiário, com os dados completos
-  // do catálogo (nome, categoria, nível) via include.
   listarHabilidades: async (req: Request, res: Response) => {
     try {
       const id_estagiario = Number(req.params.id)
@@ -184,8 +216,6 @@ export const EstagiarioController = {
     }
   },
 
-  // ── POST /estagiarios/:id/habilidades ──────────────────────────────────
-  // body: { id_habilidade: number }
   adicionarHabilidade: async (req: Request, res: Response) => {
     try {
       const id_estagiario = Number(req.params.id)
@@ -226,7 +256,6 @@ export const EstagiarioController = {
     }
   },
 
-  // ── DELETE /estagiarios/:id/habilidades/:habilidadeId ──────────────────
   removerHabilidade: async (req: Request, res: Response) => {
     try {
       const id_estagiario = Number(req.params.id)

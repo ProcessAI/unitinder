@@ -24,7 +24,34 @@ export function registroEmpresa(dados: {
   )
 }
 
-export function registroUsuario(dados: { nome: string; email: string; senha: string; cpf: string }) {
+export interface RegistroUsuarioPayload {
+  nome: string
+  email: string
+  senha: string
+  cpf: string
+  data_nascimento?: string
+  telefone?: string
+  foto_perfil_url?: string
+  cidade?: string
+  estado?: string
+  disponivel_remoto?: boolean
+  instituicao?: string
+  curso?: string
+  semestre_atual?: number
+  previsao_formatura?: string
+  turno?: string
+  area_interesse?: string
+  nivel_experiencia?: string
+  modalidade_preferida?: string
+  carga_horaria_preferida?: number
+  aceita_bolsa_minima?: boolean
+  cv_url?: string
+  linkedin_url?: string
+  portfolio_url?: string
+  bio?: string
+}
+
+export function registroUsuario(dados: RegistroUsuarioPayload) {
   return request<{ token: string; role: Role; estagiario: { id: number; nome: string; email: string } }>(
     '/auth/registro/usuario',
     { method: 'POST', body: JSON.stringify(dados) }

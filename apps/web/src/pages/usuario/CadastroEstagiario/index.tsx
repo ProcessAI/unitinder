@@ -1,4 +1,6 @@
 import React, { useState, ChangeEvent } from 'react'
+import { registroUsuario } from '@/services/AuthService'
+import { saveSession } from '@/services/utils/http'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────
 type Turno = 'manha' | 'tarde' | 'noite' | 'integral'
@@ -211,12 +213,37 @@ export function CadastroEstagiario() {
     }
     setEnviando(true)
     try {
-      // TODO: trocar pela URL da sua API
-      // await fetch('/api/estagiarios', { method: 'POST', body: JSON.stringify(form) })
-      await new Promise(r => setTimeout(r, 800))
+      const resposta = await registroUsuario({
+        nome: form.nome_completo,
+        email: form.email,
+        senha: form.senha,
+        cpf: form.cpf,
+        data_nascimento: form.data_nascimento || undefined,
+        telefone: form.telefone || undefined,
+        foto_perfil_url: form.foto_perfil_url || undefined,
+        cidade: form.cidade || undefined,
+        estado: form.estado || undefined,
+        disponivel_remoto: form.disponivel_remoto,
+        instituicao: form.instituicao || undefined,
+        curso: form.curso || undefined,
+        semestre_atual: form.semestre_atual ? Number(form.semestre_atual) : undefined,
+        previsao_formatura: form.previsao_formatura || undefined,
+        turno: form.turno || undefined,
+        area_interesse: form.area_interesse || undefined,
+        nivel_experiencia: form.nivel_experiencia || undefined,
+        modalidade_preferida: form.modalidade_preferida || undefined,
+        carga_horaria_preferida: form.carga_horaria_preferida ? Number(form.carga_horaria_preferida) : undefined,
+        aceita_bolsa_minima: form.aceita_bolsa_minima,
+        cv_url: form.cv_url || undefined,
+        linkedin_url: form.linkedin_url || undefined,
+        portfolio_url: form.portfolio_url || undefined,
+        bio: form.bio || undefined,
+      })
+
+      saveSession({ token: resposta.token, role: resposta.role, id: resposta.estagiario.id })
       setSucesso(true)
-    } catch {
-      alert('Erro ao criar perfil. Tente novamente.')
+    } catch (err: any) {
+      alert(err?.message ?? 'Erro ao criar perfil. Tente novamente.')
     } finally {
       setEnviando(false)
     }
