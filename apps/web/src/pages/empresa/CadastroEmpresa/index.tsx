@@ -120,6 +120,21 @@ export function CadastroEmpresa() {
     return e
   }
 
+  function handleCancelar() {
+  setFormData({
+    nomeEmpresa: '',
+    cnpj: '',
+    email: '',
+    telefone: '',
+    areaAtuacao: '',
+    descricao: '',
+    senha: '',
+    confirmarSenha: '',
+  })
+  setErros({})
+  setAlerta(null)
+  navigate(-1)
+}
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setAlerta(null)
@@ -349,6 +364,7 @@ export function CadastroEmpresa() {
         <div className="flex flex-col gap-3 md:col-span-2 sm:flex-row sm:justify-end">
           <button
             type="button"
+            onClick={handleCancelar}
             className="rounded-lg border border-[var(--color-border)] px-5 py-3 text-sm font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
           >
             Cancelar

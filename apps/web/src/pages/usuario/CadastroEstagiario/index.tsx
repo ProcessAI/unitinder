@@ -184,8 +184,8 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: #2a9d8f; cursor:
 .btn-add:hover:not(:disabled) { background: #24887d; }
 .btn-add:disabled { opacity: .6; cursor: not-allowed; }
 .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; }
-.btn-back { font-size: 14px; color: #5f8aa0; background: none; border: none; cursor: pointer; }
-.btn-back:hover { color: #1b3a52; }
+.btn-cancelar { font-size: 14px; font-weight: 500; padding: 10px 24px; border: 1px solid #cddce8; border-radius: 8px; background: #fff; color: #5f8aa0; cursor: pointer; }
+.btn-cancelar:hover { background: #eef4f8; }
 .btn-criar { font-size: 14px; font-weight: 500; padding: 10px 28px; background: #1b3a52; color: #fff; border: none; border-radius: 8px; cursor: pointer; }
 .btn-criar:hover:not(:disabled) { background: #142e42; }
 .btn-criar:disabled { opacity: .6; cursor: not-allowed; }
@@ -254,6 +254,12 @@ export function CadastroEstagiario() {
     setForm(p => ({ ...p, habilidades: p.habilidades.filter(h => h !== nome) }))
   }
 
+  function handleCancelar() {
+  setForm(INICIAL)
+  setErros({})
+  setHabilidadeSelecionada('')
+  navigate(-1)
+}
   async function handleSubmit() {
     const e = validar(form)
     if (Object.keys(e).length > 0) {
@@ -521,7 +527,7 @@ export function CadastroEstagiario() {
 
           {/* RODAPÉ */}
           <div className="foot">
-            <button type="button" className="btn-back" onClick={() => window.history.back()}>← Voltar</button>
+            <button type="button" className="btn-cancelar" onClick={handleCancelar}>Cancelar</button>
             <button type="button" className="btn-criar" onClick={handleSubmit} disabled={enviando}>
               {enviando ? 'Salvando...' : 'Criar perfil'}
             </button>
