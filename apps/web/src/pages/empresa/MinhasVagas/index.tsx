@@ -633,7 +633,6 @@ export function MinhasVagas() {
                   ))}
                 </div>
               </Field>
-
               <Field label={<RequiredLabel>Nível da vaga</RequiredLabel>}>
                 <div className="flex gap-3">
                   {LEVELS.map((l) => (
