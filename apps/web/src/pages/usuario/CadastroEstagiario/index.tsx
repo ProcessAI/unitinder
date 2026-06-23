@@ -1,5 +1,7 @@
-import React, { useState, ChangeEvent } from 'react'
+import React, { useEffect, useState, ChangeEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { registroUsuario } from '@/services/AuthService'
+import { listarHabilidades, type Habilidade } from '@/services/HabilidadesService'
 import { saveSession } from '@/services/utils/http'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────
@@ -50,7 +52,7 @@ const INICIAL: FormData = {
   area_interesse: '', nivel_experiencia: '', modalidade_preferida: '',
   carga_horaria_preferida: '', aceita_bolsa_minima: false,
   cv_url: '', linkedin_url: '', portfolio_url: '', bio: '',
-  habilidades: [''],
+  habilidades: [],
 }
 
 // ── Máscaras ──────────────────────────────────────────────────────────────
@@ -66,6 +68,23 @@ function mascaraTel(v: string) {
     .replace(/(\d{5})(\d{1,4})$/,'$1-$2')
 }
 
+function mascaraDataBR(v: string) {
+  return v.replace(/\D/g, '').slice(0, 8)
+    .replace(/(\d{2})(\d)/, '$1/$2')
+    .replace(/(\d{2})\/(\d{2})(\d)/, '$1/$2/$3')
+}
+
+function dataBRParaISO(v: string) {
+  const [dia, mes, ano] = v.split('/')
+  if (!dia || !mes || !ano || ano.length !== 4) return ''
+  return `${ano}-${mes}-${dia}`
+}
+
+function criarDataLocal(dataISO: string) {
+  const [ano, mes, dia] = dataISO.split('-').map(Number)
+  return new Date(ano, mes - 1, dia)
+}
+
 // ── Validação ─────────────────────────────────────────────────────────────
 function validar(f: FormData): FormErrors {
   const e: FormErrors = {}
@@ -79,10 +98,18 @@ function validar(f: FormData): FormErrors {
   if (f.senha !== f.confirmar_senha) e.confirmar_senha = 'Senhas não coincidem.'
   if (!f.data_nascimento) {
     e.data_nascimento = 'Data de nascimento obrigatória.'
+  } else if (!/^\d{2}\/\d{2}\/\d{4}$/.test(f.data_nascimento)) {
+    e.data_nascimento = 'Use o formato dd/mm/aaaa.'
   } else {
-    const nascimento = new Date(f.data_nascimento)
+    const dataISO = dataBRParaISO(f.data_nascimento)
+    const nascimento = criarDataLocal(dataISO)
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
+
+    if (Number.isNaN(nascimento.getTime())) {
+      e.data_nascimento = 'Data de nascimento inválida.'
+      return e
+    }
 
     if (nascimento > hoje) {
       e.data_nascimento = 'Data de nascimento não pode ser no futuro.'
@@ -100,9 +127,19 @@ function validar(f: FormData): FormErrors {
   }
 
   if (f.previsao_formatura) {
-    const formatura = new Date(f.previsao_formatura)
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(f.previsao_formatura)) {
+      e.previsao_formatura = 'Use o formato dd/mm/aaaa.'
+      return e
+    }
+
+    const formatura = criarDataLocal(dataBRParaISO(f.previsao_formatura))
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
+
+    if (Number.isNaN(formatura.getTime())) {
+      e.previsao_formatura = 'Data de formatura inválida.'
+      return e
+    }
 
     if (formatura < hoje) {
       e.previsao_formatura = 'Previsão de formatura não pode estar no passado.'
@@ -137,13 +174,15 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: #2a9d8f; cursor:
 .avatar-label { font-size: 13px; color: #1b3a52; font-weight: 500; margin-bottom: 6px; }
 .btn-foto { font-size: 12px; padding: 5px 12px; border: 1px solid #cddce8; border-radius: 6px; background: #eef4f8; color: #5f8aa0; cursor: pointer; }
 .hint { font-size: 11px; color: #8aabb8; margin-top: 2px; }
-.skills-list { display: flex; flex-direction: column; gap: 8px; }
-.srow { display: flex; gap: 8px; align-items: center; }
-.srow input { flex: 1; width: auto; }
-.btn-rm { width: 30px; height: 30px; border: 1px solid #cddce8; border-radius: 7px; background: #eef4f8; color: #5f8aa0; cursor: pointer; flex-shrink: 0; font-size: 14px; }
-.btn-rm:hover { border-color: #e05050; color: #e05050; background: #fff5f5; }
-.btn-add { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 8px 12px; border: 1px dashed #9ec4d4; border-radius: 7px; background: transparent; color: #5f8aa0; cursor: pointer; width: 100%; justify-content: center; margin-top: 6px; }
-.btn-add:hover { background: #eef4f8; color: #1b3a52; }
+.skills-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.skill-tag { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 999px; border: 1px solid #c5eee7; background: #e9fbf8; color: #2a9d8f; }
+.skill-tag button { border: 0; background: transparent; color: #5f8aa0; cursor: pointer; font-size: 13px; line-height: 1; padding: 0; }
+.skill-tag button:hover { color: #e05050; }
+.skill-picker { display: flex; gap: 8px; align-items: center; }
+.skill-picker select { flex: 1; }
+.btn-add { font-size: 13px; font-weight: 500; padding: 9px 16px; border: 0; border-radius: 7px; background: #2a9d8f; color: #fff; cursor: pointer; white-space: nowrap; }
+.btn-add:hover:not(:disabled) { background: #24887d; }
+.btn-add:disabled { opacity: .6; cursor: not-allowed; }
 .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; }
 .btn-back { font-size: 14px; color: #5f8aa0; background: none; border: none; cursor: pointer; }
 .btn-back:hover { color: #1b3a52; }
@@ -179,10 +218,18 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 
 // ── Componente principal ──────────────────────────────────────────────────
 export function CadastroEstagiario() {
+  const navigate = useNavigate()
   const [form, setForm] = useState<FormData>(INICIAL)
   const [erros, setErros] = useState<FormErrors>({})
   const [enviando, setEnviando] = useState(false)
-  const [sucesso, setSucesso] = useState(false)
+  const [catalogoHabilidades, setCatalogoHabilidades] = useState<Habilidade[]>([])
+  const [habilidadeSelecionada, setHabilidadeSelecionada] = useState('')
+
+  useEffect(() => {
+    listarHabilidades()
+      .then(setCatalogoHabilidades)
+      .catch(() => setCatalogoHabilidades([]))
+  }, [])
 
   function set(name: keyof FormData, value: string | boolean) {
     setForm(p => ({ ...p, [name]: value }))
@@ -195,13 +242,16 @@ export function CadastroEstagiario() {
     set(name as keyof FormData, type === 'checkbox' ? checked : value)
   }
 
-  function addHab() { setForm(p => ({ ...p, habilidades: [...p.habilidades, ''] })) }
-  function rmHab(i: number) {
-    if (form.habilidades.length <= 1) return
-    setForm(p => ({ ...p, habilidades: p.habilidades.filter((_, idx) => idx !== i) }))
+  function addHab() {
+    const habilidade = catalogoHabilidades.find(h => String(h.id_habilidade) === habilidadeSelecionada)
+    if (!habilidade || form.habilidades.includes(habilidade.habilidade_nome)) return
+
+    setForm(p => ({ ...p, habilidades: [...p.habilidades, habilidade.habilidade_nome] }))
+    setHabilidadeSelecionada('')
   }
-  function setHab(i: number, v: string) {
-    setForm(p => { const h = [...p.habilidades]; h[i] = v; return { ...p, habilidades: h } })
+
+  function rmHab(nome: string) {
+    setForm(p => ({ ...p, habilidades: p.habilidades.filter(h => h !== nome) }))
   }
 
   async function handleSubmit() {
@@ -218,7 +268,7 @@ export function CadastroEstagiario() {
         email: form.email,
         senha: form.senha,
         cpf: form.cpf,
-        data_nascimento: form.data_nascimento || undefined,
+        data_nascimento: dataBRParaISO(form.data_nascimento) || undefined,
         telefone: form.telefone || undefined,
         foto_perfil_url: form.foto_perfil_url || undefined,
         cidade: form.cidade || undefined,
@@ -227,7 +277,7 @@ export function CadastroEstagiario() {
         instituicao: form.instituicao || undefined,
         curso: form.curso || undefined,
         semestre_atual: form.semestre_atual ? Number(form.semestre_atual) : undefined,
-        previsao_formatura: form.previsao_formatura || undefined,
+        previsao_formatura: form.previsao_formatura ? dataBRParaISO(form.previsao_formatura) : undefined,
         turno: form.turno || undefined,
         area_interesse: form.area_interesse || undefined,
         nivel_experiencia: form.nivel_experiencia || undefined,
@@ -238,10 +288,11 @@ export function CadastroEstagiario() {
         linkedin_url: form.linkedin_url || undefined,
         portfolio_url: form.portfolio_url || undefined,
         bio: form.bio || undefined,
+        habilidades: form.habilidades,
       })
 
       saveSession({ token: resposta.token, role: resposta.role, id: resposta.estagiario.id })
-      setSucesso(true)
+      navigate('/usuario', { replace: true })
     } catch (err: any) {
       alert(err?.message ?? 'Erro ao criar perfil. Tente novamente.')
     } finally {
@@ -253,14 +304,7 @@ export function CadastroEstagiario() {
     <>
       <style>{css}</style>
 
-      {sucesso ? (
-        <div className="cad-inner sucesso">
-          <div className="sucesso-emoji">🎉</div>
-          <h1 className="cad-title">Perfil criado com sucesso!</h1>
-          <p style={{ color: '#5f8aa0', marginTop: 8, textAlign: 'center' }}>Bem-vindo ao UniTinder.</p>
-        </div>
-      ) : (
-        <main className="cad-inner">
+      <main className="cad-inner">
           <h1 className="cad-title">Cadastro de estagiário</h1>
 
           {/* CONTA */}
@@ -309,7 +353,15 @@ export function CadastroEstagiario() {
             </div>
             <div className="row r2">
               <Campo id="data_nascimento" label="Data de nascimento" obrigatorio erro={erros.data_nascimento}>
-                <input id="data_nascimento" name="data_nascimento" type="date" value={form.data_nascimento} onChange={handleChange}/>
+                <input
+                  id="data_nascimento"
+                  name="data_nascimento"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="dd/mm/aaaa"
+                  value={form.data_nascimento}
+                  onChange={e => set('data_nascimento', mascaraDataBR(e.target.value))}
+                />
               </Campo>
               <Campo id="telefone" label="Telefone">
                 <input id="telefone" name="telefone" type="tel" placeholder="(00) 90000-0000" value={form.telefone} onChange={e => set('telefone', mascaraTel(e.target.value))}/>
@@ -349,7 +401,15 @@ export function CadastroEstagiario() {
             </div>
             <div className="row r2">
               <Campo id="previsao_formatura" label="Previsão de formatura" erro={erros.previsao_formatura}>
-                <input id="previsao_formatura" name="previsao_formatura" type="date" value={form.previsao_formatura} onChange={handleChange}/>
+                <input
+                  id="previsao_formatura"
+                  name="previsao_formatura"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="dd/mm/aaaa"
+                  value={form.previsao_formatura}
+                  onChange={e => set('previsao_formatura', mascaraDataBR(e.target.value))}
+                />
               </Campo>
               <Campo id="turno" label="Turno">
                 <select id="turno" name="turno" value={form.turno} onChange={handleChange}>
@@ -365,15 +425,35 @@ export function CadastroEstagiario() {
 
           {/* HABILIDADES */}
           <Secao titulo="Habilidades">
-            <div className="skills-list">
-              {form.habilidades.map((h, i) => (
-                <div className="srow" key={i}>
-                  <input type="text" placeholder="Ex: React, Python, Figma..." value={h} onChange={e => setHab(i, e.target.value)}/>
-                  <button type="button" className="btn-rm" onClick={() => rmHab(i)} aria-label="Remover">✕</button>
-                </div>
-              ))}
+            {form.habilidades.length > 0 && (
+              <div className="skills-tags">
+                {form.habilidades.map(h => (
+                  <span className="skill-tag" key={h}>
+                    {h}
+                    <button type="button" onClick={() => rmHab(h)} aria-label={`Remover ${h}`}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="skill-picker">
+              <select
+                value={habilidadeSelecionada}
+                onChange={e => setHabilidadeSelecionada(e.target.value)}
+              >
+                <option value="">Selecione uma habilidade...</option>
+                {catalogoHabilidades
+                  .filter(h => !form.habilidades.includes(h.habilidade_nome))
+                  .map(h => (
+                    <option key={h.id_habilidade} value={h.id_habilidade}>
+                      {h.habilidade_nome}
+                    </option>
+                  ))}
+              </select>
+              <button type="button" className="btn-add" onClick={addHab} disabled={!habilidadeSelecionada}>
+                Adicionar habilidade
+              </button>
             </div>
-            <button type="button" className="btn-add" onClick={addHab}>+ Adicionar habilidade</button>
           </Secao>
 
           {/* PREFERÊNCIAS */}
@@ -446,8 +526,7 @@ export function CadastroEstagiario() {
               {enviando ? 'Salvando...' : 'Criar perfil'}
             </button>
           </div>
-        </main>
-      )}
+      </main>
     </>
   )
 }

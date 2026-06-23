@@ -25,6 +25,12 @@ function mapStatusDaApi(status: string): CandidatoStatus {
 }
 
 function mapCandidatoDaApi(m: any, vaga: { id_vaga: number; vaga_titulo: string }): Candidato {
+  const habilidades = Array.isArray(m.estagiario?.habilidades)
+    ? m.estagiario.habilidades
+        .map((item: any) => item.habilidade?.habilidade_nome)
+        .filter(Boolean)
+    : []
+
   return {
     id: String(m.id_match),
     nome: m.estagiario?.estagiario_nome_completo ?? 'Candidato',
@@ -34,8 +40,8 @@ function mapCandidatoDaApi(m: any, vaga: { id_vaga: number; vaga_titulo: string 
     jobTitle: vaga.vaga_titulo,
     jobId: String(vaga.id_vaga),
     status: mapStatusDaApi(m.match_status),
-    proficiencia: 'intermediario',
-    habilidades: [],
+    proficiencia: m.estagiario?.estagiario_nivel_experiencia ?? 'intermediario',
+    habilidades,
     contactEmail: m.estagiario?.estagiario_email,
   }
 }

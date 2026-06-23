@@ -1,9 +1,30 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 
+const HABILIDADES_PADRAO = [
+  { habilidade_nome: 'React', habilidade_categoria: 'tecnica' },
+  { habilidade_nome: 'JavaScript', habilidade_categoria: 'tecnica' },
+  { habilidade_nome: 'TypeScript', habilidade_categoria: 'tecnica' },
+  { habilidade_nome: 'Node.js', habilidade_categoria: 'tecnica' },
+  { habilidade_nome: 'Python', habilidade_categoria: 'tecnica' },
+  { habilidade_nome: 'SQL', habilidade_categoria: 'tecnica' },
+  { habilidade_nome: 'Git', habilidade_categoria: 'ferramenta' },
+  { habilidade_nome: 'Figma', habilidade_categoria: 'ferramenta' },
+  { habilidade_nome: 'Inglês', habilidade_categoria: 'idioma' },
+  { habilidade_nome: 'Comunicação', habilidade_categoria: 'comportamental' },
+  { habilidade_nome: 'Trabalho em equipe', habilidade_categoria: 'comportamental' },
+  { habilidade_nome: 'Proatividade', habilidade_categoria: 'comportamental' },
+]
+
 export const HabilidadeController = {
   listar: async (req: Request, res: Response) => {
     try {
+      const total = await prisma.habilidade.count()
+
+      if (total === 0) {
+        await prisma.habilidade.createMany({ data: HABILIDADES_PADRAO })
+      }
+
       const habilidades = await prisma.habilidade.findMany({ orderBy: { habilidade_nome: 'asc' } })
       return res.json(habilidades)
     } catch (error) {

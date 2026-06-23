@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { Alert } from '@/components/Alert'
+import { criarHabilidade } from '@/services/HabilidadesService'
+import { adicionarHabilidadeEstagiario } from '@/services/EstagiarioService'
+import { getSession } from '@/services/utils/http'
 
 type FormData = {
   habilidade_nome: string
@@ -15,6 +18,12 @@ const emptyForm: FormData = {
   habilidade_descricao: '',
 }
 
+const NIVEL_API: Record<string, string> = {
+  basico: 'B',
+  intermediario: 'I',
+  avancado: 'A',
+}
+
 export function CadastroHabilidade() {
   const [alerta, setAlerta] = useState<{
     type: 'success' | 'error'
@@ -22,6 +31,7 @@ export function CadastroHabilidade() {
   } | null>(null)
 
   const [formData, setFormData] = useState<FormData>(emptyForm)
+  const [enviando, setEnviando] = useState(false)
 
   function handleChange(
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -34,17 +44,39 @@ export function CadastroHabilidade() {
     }))
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    console.log('Dados da habilidade:', formData)
+    setEnviando(true)
+    setAlerta(null)
 
-    setAlerta({
-      type: 'success',
-      message: 'Habilidade cadastrada com sucesso!',
-    })
+    try {
+      const habilidade = await criarHabilidade({
+        habilidade_nome: formData.habilidade_nome.trim(),
+        habilidade_categoria: formData.habilidade_tipo || undefined,
+        habilidade_nivel: NIVEL_API[formData.habilidade_nivel] ?? undefined,
+        habilidade_descricao: formData.habilidade_descricao.trim() || undefined,
+      })
 
-    setFormData(emptyForm)
+      const session = getSession()
+      if (session?.role === 'estagiario') {
+        await adicionarHabilidadeEstagiario(session.id, habilidade.id_habilidade)
+      }
+
+      setAlerta({
+        type: 'success',
+        message: 'Habilidade cadastrada e vinculada ao seu perfil com sucesso!',
+      })
+
+      setFormData(emptyForm)
+    } catch {
+      setAlerta({
+        type: 'error',
+        message: 'Não foi possível cadastrar a habilidade. Tente novamente.',
+      })
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -115,7 +147,7 @@ export function CadastroHabilidade() {
 
         <div className="flex flex-col gap-2 md:col-span-2">
           <label htmlFor="habilidade_nivel" className="text-sm font-medium text-[var(--color-text)]">
-            Nível
+            Nível <span className="text-[var(--color-text-muted)] font-normal">(opcional)</span>
           </label>
 
           <select
@@ -123,10 +155,9 @@ export function CadastroHabilidade() {
             name="habilidade_nivel"
             value={formData.habilidade_nivel}
             onChange={handleChange}
-            required
             className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]"
           >
-            <option value="">Selecione um nível</option>
+            <option value="">Definir depois</option>
             <option value="basico">Básico</option>
             <option value="intermediario">Intermediário</option>
             <option value="avancado">Avançado</option>
@@ -160,9 +191,10 @@ export function CadastroHabilidade() {
 
           <button
             type="submit"
+            disabled={enviando}
             className="rounded-lg bg-[var(--color-primary)] px-5 py-3 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)]"
           >
-            Cadastrar habilidade
+            {enviando ? 'Cadastrando...' : 'Cadastrar habilidade'}
           </button>
         </div>
       </form>

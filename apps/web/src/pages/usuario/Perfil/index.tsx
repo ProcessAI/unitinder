@@ -29,20 +29,41 @@ const NIVEL_EXP_LABEL: Record<string, string> = {
 const MODALIDADE_LABEL: Record<string, string> = {
   presencial: 'Presencial', remoto: 'Remoto', hibrido: 'Híbrido',
 }
-const HABILIDADE_NIVEL_LABEL: Record<string, string> = {
-  B: 'Básico', I: 'Intermediário', A: 'Avançado',
-}
-const HABILIDADE_NIVEL_COLOR: Record<string, string> = {
-  B: 'bg-blue-50 text-blue-600 border-blue-100',
-  I: 'bg-amber-50 text-amber-600 border-amber-100',
-  A: 'bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary-light)]',
-}
-
 // ── Máscaras ──────────────────────────────────────────────────────────────
 function mascaraTel(v: string) {
   return v.replace(/\D/g, '').slice(0, 11)
     .replace(/^(\d{2})(\d)/, '($1) $2')
     .replace(/(\d{5})(\d{1,4})$/, '$1-$2')
+}
+
+function mascaraDataBR(v: string) {
+  return v.replace(/\D/g, '').slice(0, 8)
+    .replace(/(\d{2})(\d)/, '$1/$2')
+    .replace(/(\d{2})\/(\d{2})(\d)/, '$1/$2/$3')
+}
+
+function dataBRParaISO(v: string) {
+  const [dia, mes, ano] = v.split('/')
+  if (!dia || !mes || !ano || ano.length !== 4) return ''
+  return `${ano}-${mes}-${dia}`
+}
+
+function normalizarDataISO(v: string | null | undefined) {
+  if (!v) return ''
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return dataBRParaISO(v)
+  return v.slice(0, 10)
+}
+
+function formatarDataBR(v: string | null | undefined) {
+  const iso = normalizarDataISO(v)
+  const [ano, mes, dia] = iso.split('-')
+  if (!ano || !mes || !dia) return ''
+  return `${dia}/${mes}/${ano}`
+}
+
+function criarDataLocal(dataISO: string) {
+  const [ano, mes, dia] = dataISO.split('-').map(Number)
+  return new Date(ano, mes - 1, dia)
 }
 
 function formatarCpf(cpf: string) {
@@ -63,9 +84,20 @@ function validar(f: Estagiario): FormErrors {
     e.estagiario_linkedin_url = 'URL deve iniciar com https://linkedin.com'
 
   if (f.estagiario_previsao_formatura) {
-    const formatura = new Date(f.estagiario_previsao_formatura)
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(f.estagiario_previsao_formatura) &&
+        !/^\d{4}-\d{2}-\d{2}/.test(f.estagiario_previsao_formatura)) {
+      e.estagiario_previsao_formatura = 'Use o formato dd/mm/aaaa.'
+      return e
+    }
+
+    const formatura = criarDataLocal(normalizarDataISO(f.estagiario_previsao_formatura))
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
+
+    if (Number.isNaN(formatura.getTime())) {
+      e.estagiario_previsao_formatura = 'Data de formatura inválida.'
+      return e
+    }
 
     if (formatura < hoje) {
       e.estagiario_previsao_formatura = 'Previsão de formatura não pode estar no passado.'
@@ -235,7 +267,7 @@ export function PerfilUsuario() {
       estagiario_instituicao: form.estagiario_instituicao,
       estagiario_curso: form.estagiario_curso,
       estagiario_semestre_atual: form.estagiario_semestre_atual,
-      estagiario_previsao_formatura: form.estagiario_previsao_formatura,
+      estagiario_previsao_formatura: normalizarDataISO(form.estagiario_previsao_formatura),
       estagiario_turno: form.estagiario_turno,
       estagiario_area_interesse: form.estagiario_area_interesse,
       estagiario_nivel_experiencia: form.estagiario_nivel_experiencia,
@@ -488,8 +520,17 @@ export function PerfilUsuario() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo id="estagiario_previsao_formatura" label="Previsão de formatura" erro={erros.estagiario_previsao_formatura}>
               <input
-                id="estagiario_previsao_formatura" name="estagiario_previsao_formatura" type="date"
-                value={form.estagiario_previsao_formatura?.slice(0, 10) ?? ''} onChange={handleChange}
+                id="estagiario_previsao_formatura"
+                name="estagiario_previsao_formatura"
+                type="text"
+                inputMode="numeric"
+                placeholder="dd/mm/aaaa"
+                value={formatarDataBR(form.estagiario_previsao_formatura)}
+                onChange={e => {
+                  if (!editando) return
+                  setForm({ ...form, estagiario_previsao_formatura: mascaraDataBR(e.target.value) })
+                  setErros(p => ({ ...p, estagiario_previsao_formatura: undefined }))
+                }}
                 disabled={!editando}
                 className={inputCls}
               />
@@ -534,16 +575,9 @@ export function PerfilUsuario() {
             {habilidades.map(v => (
               <span
                 key={v.id_estagiario_habilidade}
-                className={`text-xs font-medium px-3 py-1 rounded-full border flex items-center gap-1.5 ${
-                  v.habilidade.habilidade_nivel
-                    ? HABILIDADE_NIVEL_COLOR[v.habilidade.habilidade_nivel]
-                    : 'bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary-light)]'
-                }`}
+                className="text-xs font-medium px-3 py-1 rounded-full border flex items-center gap-1.5 bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary-light)]"
               >
                 {v.habilidade.habilidade_nome}
-                {v.habilidade.habilidade_nivel && (
-                  <span className="opacity-60 text-[10px]">· {HABILIDADE_NIVEL_LABEL[v.habilidade.habilidade_nivel]}</span>
-                )}
                 <button
                   type="button"
                   onClick={() => handleRemoverHabilidade(v.id_habilidade)}
@@ -570,7 +604,6 @@ export function PerfilUsuario() {
               .map(h => (
                 <option key={h.id_habilidade} value={h.id_habilidade}>
                   {h.habilidade_nome}
-                  {h.habilidade_nivel ? ` · ${HABILIDADE_NIVEL_LABEL[h.habilidade_nivel]}` : ''}
                 </option>
               ))}
           </select>

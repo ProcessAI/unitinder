@@ -138,6 +138,7 @@ export const AuthController = {
         linkedin_url,
         portfolio_url,
         bio,
+        habilidades,
       } = req.body as Record<string, any>
 
       if (!nome || !email || !senha || !cpf) {
@@ -169,6 +170,15 @@ export const AuthController = {
       }
 
       const senhaHash = await bcrypt.hash(senha, SALT_ROUNDS)
+
+      const nomesHabilidades = Array.from(
+        new Map(
+          (Array.isArray(habilidades) ? habilidades : [])
+            .map((habilidade) => String(habilidade).trim().replace(/\s+/g, ' '))
+            .filter(Boolean)
+            .map((habilidade) => [habilidade.toLocaleLowerCase('pt-BR'), habilidade])
+        ).values()
+      )
 
       const { usuario, estagiario } = await prisma.$transaction(async (tx) => {
         const estagiario = await tx.estagiario.create({
@@ -208,6 +218,23 @@ export const AuthController = {
             id_estagiario_estagiario: estagiario.id_estagiario,
           },
         })
+
+        for (const nomeHabilidade of nomesHabilidades) {
+          const habilidadeExistente = await tx.habilidade.findFirst({
+            where: { habilidade_nome: { equals: nomeHabilidade, mode: 'insensitive' } },
+          })
+
+          const habilidade = habilidadeExistente ?? await tx.habilidade.create({
+            data: { habilidade_nome: nomeHabilidade },
+          })
+
+          await tx.rlEstagiarioHabilidade.create({
+            data: {
+              id_estagiario: estagiario.id_estagiario,
+              id_habilidade: habilidade.id_habilidade,
+            },
+          })
+        }
 
         return { usuario, estagiario }
       })
