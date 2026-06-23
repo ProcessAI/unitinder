@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Alert } from '@/components/Alert'
 import { api, getSession, ApiError } from '@/services/utils/http'
 
-type CandidatoStatus = 'novo' | 'em_analise' | 'aprovado' | 'recusado'
+type CandidatoStatus = 'novo' | 'aprovado' | 'recusado'
 
 interface Candidato {
   id: string
@@ -42,14 +42,12 @@ function mapCandidatoDaApi(m: any, vaga: { id_vaga: number; vaga_titulo: string 
 
 const STATUS_LABELS: Record<CandidatoStatus, string> = {
   novo: 'Novo',
-  em_analise: 'Em análise',
   aprovado: 'Aprovado',
   recusado: 'Recusado',
 }
 
 const STATUS_COLORS: Record<CandidatoStatus, string> = {
   novo: 'bg-blue-50 text-blue-700',
-  em_analise: 'bg-yellow-50 text-yellow-700',
   aprovado: 'bg-[var(--color-primary-light)] text-[var(--color-primary-dark)]',
   recusado: 'bg-red-50 text-red-600',
 }
@@ -110,7 +108,10 @@ export function Candidatos() {
       } catch (error) {
         setAlerta({
           type: 'error',
-          message: error instanceof ApiError ? error.message : 'Não foi possível carregar os candidatos.',
+          message:
+            error instanceof ApiError
+              ? error.message
+              : 'Não foi possível carregar os candidatos.',
         })
       }
     }
@@ -128,21 +129,32 @@ export function Candidatos() {
     const labels: Record<CandidatoStatus, string> = {
       aprovado: 'Candidato aprovado com sucesso!',
       recusado: 'Candidato recusado.',
-      em_analise: 'Candidato movido para análise.',
       novo: 'Status atualizado.',
     }
 
     try {
-      await api.atualizarStatusMatch(Number(id), novoStatus === 'aprovado' ? 'aceito' : 'recusado')
+      await api.atualizarStatusMatch(
+        Number(id),
+        novoStatus === 'aprovado' ? 'aceito' : 'recusado'
+      )
 
       setCandidatos((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, status: novoStatus } : c))
+        prev.map((c) =>
+          c.id === id ? { ...c, status: novoStatus } : c
+        )
       )
-      setAlerta({ type: novoStatus === 'aprovado' ? 'success' : 'error', message: labels[novoStatus] })
+
+      setAlerta({
+        type: novoStatus === 'aprovado' ? 'success' : 'error',
+        message: labels[novoStatus],
+      })
     } catch (error) {
       setAlerta({
         type: 'error',
-        message: error instanceof ApiError ? error.message : 'Não foi possível atualizar o status do candidato.',
+        message:
+          error instanceof ApiError
+            ? error.message
+            : 'Não foi possível atualizar o status do candidato.',
       })
     }
   }
@@ -150,11 +162,7 @@ export function Candidatos() {
   function toggleContato(id: string) {
     setContatosVisiveis((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
+      next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
   }
@@ -170,7 +178,9 @@ export function Candidatos() {
       )}
 
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">Candidatos com Match</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">
+          Candidatos com Match
+        </h1>
         <p className="text-sm text-[var(--color-text-muted)]">
           {totalNovos > 0
             ? `${totalNovos} novo${totalNovos > 1 ? 's candidatos aguardam' : ' candidato aguarda'} sua avaliação.`
@@ -179,7 +189,7 @@ export function Candidatos() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {(['todos', 'novo', 'em_analise', 'aprovado', 'recusado'] as const).map((opcao) => (
+        {(['todos', 'novo', 'aprovado', 'recusado'] as const).map((opcao) => (
           <button
             key={opcao}
             onClick={() => setFiltroStatus(opcao)}
@@ -190,14 +200,16 @@ export function Candidatos() {
                 : 'bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-primary-light)]',
             ].join(' ')}
           >
-            {opcao === 'todos' ? 'Todos' : STATUS_LABELS[opcao as CandidatoStatus]}
+            {opcao === 'todos' ? 'Todos' : STATUS_LABELS[opcao]}
           </button>
         ))}
       </div>
 
       {candidatosFiltrados.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-          <p className="text-[var(--color-text)] font-medium">Nenhum candidato encontrado</p>
+          <p className="text-[var(--color-text)] font-medium">
+            Nenhum candidato encontrado
+          </p>
           <p className="text-sm text-[var(--color-text-muted)] max-w-xs">
             Quando estudantes derem like nas suas vagas e houver interesse mútuo, eles aparecem aqui.
           </p>
@@ -226,7 +238,12 @@ interface CandidatoItemProps {
   onAlterarStatus: (id: string, status: CandidatoStatus) => void
 }
 
-function CandidatoItem({ candidato, contatoVisivel, onToggleContato, onAlterarStatus }: CandidatoItemProps) {
+function CandidatoItem({
+  candidato,
+  contatoVisivel,
+  onToggleContato,
+  onAlterarStatus,
+}: CandidatoItemProps) {
   const encerrado = candidato.status === 'aprovado' || candidato.status === 'recusado'
 
   return (
@@ -245,16 +262,14 @@ function CandidatoItem({ candidato, contatoVisivel, onToggleContato, onAlterarSt
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <span
-                className={[
-                  'text-xs font-medium px-2.5 py-0.5 rounded-full',
-                  STATUS_COLORS[candidato.status],
-                ].join(' ')}
-              >
-                {STATUS_LABELS[candidato.status]}
-              </span>
-            </div>
+            <span
+              className={[
+                'text-xs font-medium px-2.5 py-0.5 rounded-full',
+                STATUS_COLORS[candidato.status],
+              ].join(' ')}
+            >
+              {STATUS_LABELS[candidato.status]}
+            </span>
           </div>
 
           <p className="text-xs text-[var(--color-text-muted)]">

@@ -99,7 +99,7 @@ function validate(form: FormData): FormErrors {
 
   if (!form.descricao.trim()) {
     errors.descricao = 'Obrigatório.'
-  } else if (form.descricao.trim().length < 300) {
+  } else if (form.descricao.trim().length < 1) {
     errors.descricao = `Mínimo 300 caracteres. (${form.descricao.trim().length}/300)`
   } else if (form.descricao.trim().length > 2000) {
     errors.descricao = `Máximo 2000 caracteres. (${form.descricao.trim().length}/2000)`
@@ -453,13 +453,7 @@ export function MinhasVagas() {
                   ))}
                 </div>
               )}
-
-              <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
-                <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1">
-                  🤝 Quem deu match ({vaga.matches})
-                </p>
-                <p className="text-sm text-[var(--color-text-muted)]">Nenhum estagiário curtiu ainda.</p>
-              </div>
+              
             </div>
           ))}
         </div>
